@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+    <title>廃棄物報告 - v1.0.5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+        
+        body { 
+            font-family: 'Noto Sans JP', sans-serif; 
+            background-color: #f8fafc; 
+            color: #1e293b; 
+            line-height: 1.4; 
+            overscroll-behavior: none; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        .loading-overlay { background: #ffffff; z-index: 9000; position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
+        
+        #slider-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.2); 
+            z-index: 7900; 
+            visibility: hidden; 
+            opacity: 0; 
+            transition: opacity 0.3s, visibility 0.3s;
+            pointer-events: auto;
+        }
+        #slider-backdrop.visible { visibility: visible; opacity: 1; }
+
+        .btn-action { 
+            width: 100%; height: 3.5rem; background-color: #059669; color: #ffffff; border-radius: 0.75rem; 
+            font-weight: 700; font-size: 1.125rem; display: flex; align-items: center; justify-content: center; 
+            gap: 0.5rem; transition: all 0.2s; cursor: pointer; border: none; outline: none;
+            box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2);
+        }
+        .btn-action:active:not(:disabled) { transform: scale(0.97); }
+        .btn-action:disabled { background-color: #e2e8f0 !important; color: #94a3b8 !important; box-shadow: none !important; transform: none !important; cursor: not-allowed; }
+
+        .btn-dark { background-color: #0f172a !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15) !important; }
+        .btn-dark:active:not(:disabled) { background-color: #334155 !important; box-shadow: none !important; }
+
+        .btn-report { background-color: #2563eb !important; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2) !important; }
+        .btn-report:active:not(:disabled) { background-color: #1d4ed8 !important; }
+        
+        .btn-clear-sub {
+            width: 25%; height: 3.5rem; background-color: #f1f5f9; color: #64748b; border-radius: 0.75rem;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+        .btn-clear-sub:active { background-color: #e2e8f0; transform: scale(0.95); }
+
+        .app-card { background: #ffffff; border-radius: 1rem; border: 1.5px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+        
+        #slider-panel { 
+            display: none; 
+            transform: translateY(100%); 
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+            z-index: 8000;
+        }
+        #slider-panel.visible { display: block; transform: translateY(0); }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            background: #059669;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .val-input { 
+            font-size: 2rem; font-weight: 800; text-align: center; 
+            border-bottom: 2px solid #e2e8f0; 
+            outline: none; width: 100px; color: #0f172a; 
+            background: transparent; transition: all 0.2s; 
+        }
+        .val-input:focus { border-bottom-color: #0f172a; }
+        .val-input:disabled { color: #94a3b8; border-bottom-style: dashed; opacity: 0.6; background-color: transparent !important; }
+
+        .calendar-val { font-size: 9px; line-height: 1; font-weight: 900; color: #059669; margin-top: 1px; }
+        .calendar-val-pending { font-size: 9px; line-height: 1; font-weight: 900; margin-top: 1px; }
+        .text-pending-plus { color: #f59e0b; }
+        .text-pending-minus { color: #2563eb; }
+
+        .text-sunday { color: #ef4444; }
+        .text-saturday { color: #3b82f6; }
+        
+        .today-striped {
+            background: repeating-linear-gradient(135deg, #f0fdf4, #f0fdf4 2.5px, #86efac 2.5px, #86efac 4px) !important;
+            transition: all 0.2s;
+        }
+        .today-striped:active:not(:disabled) {
+            background: #059669 !important; 
+            color: white !important;
+            transform: scale(0.97);
+        }
+
+        #calendar-expansion { max-height: 0; overflow: hidden; transition: max-height 0.6s ease-out, opacity 0.45s ease; opacity: 0; }
+        #calendar-expansion.open { max-height: 1000px; opacity: 1; }
+
+        #history-expansion { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, opacity 0.3s ease; opacity: 0; }
+        #history-expansion.open { max-height: 1000px; opacity: 1; margin-top: 0.75rem; }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #e2e8f0; transition: .4s; border-radius: 24px; }
+        .slider-switch:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider-switch { background-color: #059669; }
+        input:checked + .slider-switch:before { transform: translateX(20px); }
+
+        #toast {
+            position: fixed; left: 50%; transform: translateX(-50%) scale(0.9);
+            width: calc(100% - 3rem); max-width: 320px;
+            background-color: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px);
+            color: white; border-radius: 1.5rem;
+            display: flex; flex-direction: row; align-items: center; justify-content: center;
+            text-align: center; z-index: 9999;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 1rem 1.5rem; gap: 0.75rem;
+            cursor: pointer;
+        }
+        #toast.visible { opacity: 1; transform: translateX(-50%) scale(1); pointer-events: auto; }
+        #toast.toast-bottom { bottom: 1.25rem; }
+        #toast.toast-top { top: 2rem; }
+
+        .slide-container { overflow: hidden; position: relative; }
+        .slide-content { transition: transform 0.3s ease-out; }
+
+        .is-main-view header { position: sticky; top: 0; z-index: 1000; }
+        .is-main-view #sticky-bar-container { position: sticky; top: 88px; z-index: 950; }
+        
+        ::-webkit-scrollbar { display: none; }
+
+        #room-nav-label { 
+            background: white; 
+            z-index: 951; 
+            padding-top: 4px; 
+            padding-bottom: 12px; 
+            margin-bottom: 0px; 
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        #room-nav-label.scrolled {
+            border-bottom-color: #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body id="app-body" class="bg-slate-50 min-h-screen">
+
+    <!-- 初期ローディング画面 -->
+    <div id="loader" class="loading-overlay">
+        <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+        <span class="text-slate-500 font-bold text-sm tracking-widest animate-pulse">読み込み中...</span>
+    </div>
+
+    <div id="slider-backdrop"></div>
+
+    <!-- 数量パネル -->
+    <div id="slider-panel" class="fixed bottom-0 left-0 right-0 p-6 pt-4 bg-white border-t border-slate-200 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[2.5rem]">
+        <div class="max-w-md mx-auto flex flex-col gap-5">
+            <div class="flex flex-col gap-3">
+                <div class="flex justify-between items-start w-full px-1">
+                    <div class="flex flex-col gap-1.5 flex-1 min-w-0 pr-2">
+                        <div class="flex items-baseline gap-2">
+                            <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
+                            <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-500">
+                            <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
+                            <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
+                        </div>
+                        <div id="edit-lock-container" class="flex items-center gap-2 mt-1.5">
+                            <label class="switch">
+                                <input type="checkbox" id="edit-lock-toggle" onchange="toggleEditLock(this.checked)">
+                                <span class="slider-switch"></span>
+                            </label>
+                            <span id="edit-lock-label" class="text-sm font-bold text-slate-600">既登録分を修正する</span>
+                        </div>
+                    </div>
+                    <button id="btn-close-slider" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-transform flex-shrink-0"><i class="fas fa-times text-lg"></i></button>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center py-2">
+                <div class="flex items-end gap-3">
+                    <div class="flex flex-col items-center">
+                        <span id="label-registered" class="text-sm font-bold text-slate-400 mb-1 uppercase tracking-tight">登録済</span>
+                        <input type="number" id="registered-val-field" step="0.1" inputmode="decimal" class="val-input !border-slate-200" oninput="onRegisteredValChange(this.value)">
+                    </div>
+                    <span class="text-2xl font-black text-slate-300 mb-3">+</span>
+                    <div class="flex flex-col items-center">
+                        <span id="label-manual" class="text-sm font-bold text-emerald-600 mb-1 uppercase tracking-tight">今回分</span>
+                        <input type="number" id="manual-input-field" step="0.1" inputmode="decimal" class="val-input !text-slate-900 !border-slate-900" placeholder="0.0" onfocus="handleInputFocus(this)" oninput="onManualInput(this.value)">
+                    </div>
+                    <span class="text-lg font-bold text-slate-500 mb-3">Kg</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2">
+                <button data-val="5" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+5</button>
+                <button data-val="10" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+10</button>
+                <button data-val="15" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+15</button>
+                <button data-val="20" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+20</button>
+            </div>
+            
+            <div class="px-1 py-1.5">
+                <input type="range" id="input-slider" min="0" max="100" step="0.1" value="0" oninput="onSliderInput(this.value)">
+            </div>
+            
+            <button id="btn-confirm-slider" class="btn-action font-bold" disabled onclick="closeSlider()">計量</button>
+        </div>
+    </div>
+
+    <div id="app-content" class="max-w-md mx-auto flex flex-col min-h-screen bg-white relative shadow-2xl border-x border-slate-100 hidden">
+        <header class="px-5 py-4 flex justify-between items-center h-[88px] z-[1000] bg-white border-b border-slate-50 gap-2">
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <div id="app-icon-trigger" class="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-sm cursor-pointer select-none active:scale-95 transition-transform flex-shrink-0">
+                    <i class="fas fa-recycle text-xl"></i>
+                </div>
+                <h1 class="text-2xl font-black text-[#1e293b] tracking-tight leading-tight whitespace-nowrap">廃棄物報告</h1>
+            </div>
+
+            <div id="header-status-bar" class="flex-1 flex flex-col items-end pr-1 min-w-[80px]" style="display: none;">
+                <span id="badge-base" class="text-[15px] font-black bg-slate-900 text-white px-2 py-0.5 rounded uppercase tracking-widest leading-none mb-1.5 shadow-sm">---</span>
+                <span id="display-dept-short" class="text-[15px] font-bold text-slate-500 truncate w-full leading-none text-right">読込中</span>
+            </div>
+
+            <div class="flex items-center gap-4 flex-shrink-0">
+                <div class="w-11 h-11 flex items-center justify-center">
+                    <button id="btn-avatar" class="w-11 h-11 rounded-full bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 active:ring-2 active:ring-blue-600 transition-all">
+                        <img id="global-user-avatar" src="" class="w-full h-full object-cover">
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div id="sticky-bar-container" class="px-4 pb-0 bg-white z-[950]">
+            <div id="sticky-calendar-bar" class="hidden">
+                <div id="calendar-bar-container" class="relative w-full app-card h-[52px] flex items-center bg-slate-100 border-none shadow-none">
+                    <div class="absolute left-4 z-30">
+                        <button id="btn-select-today" class="today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform">今日を選択</button>
+                    </div>
+
+                    <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 whitespace-nowrap z-10 pointer-events-none">
+                        <i class="fas fa-calendar-day text-slate-500 text-base"></i>
+                        <div id="display-date" class="text-xl font-black text-[#1e293b]">---</div>
+                    </div>
+
+                    <div id="calendar-toggle-group" class="group flex-1 h-full flex items-center justify-end px-4 cursor-pointer active:bg-slate-200/50 transition-all z-20">
+                        <div class="w-8 h-8 flex items-center justify-center">
+                            <div id="cal-toggle-icon-container" class="flex items-center justify-center w-8 h-8 bg-emerald-50 rounded-lg text-emerald-900 group-active:bg-emerald-600 group-active:text-white transition-all shadow-sm">
+                                <i id="cal-toggle-icon" class="fas fa-chevron-up text-sm transition-transform duration-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="calendar-expansion" class="bg-white rounded-b-2xl px-1 pt-2 pb-0 open touch-pan-y slide-container">
+                    <div id="calendar-slide-wrapper" class="slide-content">
+                        <div class="grid grid-cols-7 mb-2 mt-0.5 items-center">
+                            <div class="flex justify-center">
+                                <button id="btn-prev-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-left text-xs"></i></button>
+                            </div>
+                            <h3 id="calendar-title" class="text-base font-black text-[#1e293b] tracking-tight col-span-5 text-center">---</h3>
+                            <div class="flex justify-center">
+                                <button id="btn-next-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-right text-xs"></i></button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-px text-center font-bold text-[11px] mb-1 uppercase text-[#334155] tracking-widest">
+                            <span class="text-sunday">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="text-saturday">土</span>
+                        </div>
+                        <div id="calendar-grid" class="grid grid-cols-7 gap-px"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-main-sticky" class="hidden">
+                <div id="room-nav-label" class="px-1 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-1.5 h-4 bg-emerald-600 rounded-full"></div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-door-open text-xs text-emerald-600"></i>
+                            <span id="current-room-display-name" class="text-lg font-black text-[#1e293b]">場所：---</span>
+                        </div>
+                    </div>
+                    <div id="room-dots-container" class="flex gap-1"></div>
+                </div>
+            </div>
+            
+            <div id="sticky-registration-bar" class="hidden relative">
+                <div class="app-card h-[52px] flex items-center justify-center bg-slate-100 shadow-none border-none relative overflow-hidden">
+                    <div class="flex items-center justify-center w-full gap-3">
+                        <i class="fas fa-user-gear text-slate-500 text-base"></i>
+                        <h2 class="text-xl font-black text-[#1e293b]">デフォルト設定</h2>
+                    </div>
+                </div>
+            </div>
+            <div id="sticky-description-bar" class="hidden text-center">
+                <div class="app-card h-[52px] relative flex items-center justify-center bg-slate-100 shadow-none border-none">
+                    <div class="flex items-center">
+                        <i class="fas fa-info-circle text-slate-500 text-base mr-3"></i>
+                        <h2 class="text-lg font-black text-[#1e293b]">アプリ説明</h2>
+                    </div>
+                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.5</span>
+                </div>
+            </div>
+            <div id="calendar-separator" class="hidden h-px bg-slate-200 w-full mt-1"></div>
+        </div>
+
+        <main class="flex-1 px-4 relative">
+            <div id="view-main" class="hidden flex flex-col pb-48">
+                <div id="scroll-area">
+                    <div id="input-rows-container" class="touch-pan-y slide-container">
+                        <div id="input-rows" class="grid grid-cols-2 gap-3 slide-content"></div>
+                    </div>
+                    
+                    <!-- 履歴リンクとアコーディオン -->
+                    <div class="mt-8 mb-4 flex flex-col items-center">
+                        <button id="btn-toggle-history" class="text-slate-400 font-bold text-sm flex items-center gap-2 py-2 px-4 rounded-full border border-slate-200 bg-white active:bg-slate-50 transition-colors shadow-sm" onclick="toggleHistory()">
+                            <i id="history-icon" class="fas fa-chevron-down text-[10px]"></i>
+                            <span>履歴を表示する</span>
+                        </button>
+                        
+                        <div id="history-expansion" class="w-full">
+                            <div class="app-card p-4 border-slate-200 bg-slate-50/50">
+                                <div id="history-list" class="space-y-4">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-registration" class="hidden h-full pb-32 text-center">
+                <div class="py-2 px-1 flex flex-col items-center">
+                    <span id="display-user-email" class="text-base font-bold text-slate-500 tracking-wide">---</span>
+                </div>
+                <div class="border-b border-slate-200"></div>
+                <div class="mt-4 space-y-3 mb-4">
+                    <div class="app-card p-4 border-slate-200 relative overflow-hidden">
+                        <div class="relative flex items-center justify-center mb-4 min-h-[28px]">
+                            <span id="lock-badge" class="absolute left-0 px-2 py-1 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent">LOCKED</span>
+                            <span class="relative flex items-center">
+                                <i class="fas fa-map-marker-alt text-emerald-600 absolute right-[calc(100%+8px)]"></i>
+                                <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap">01. 拠点</label>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button id="base-KP" onclick="regSelectBase('KP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>KP</span></button>
+                            <button id="base-HP" onclick="regSelectBase('HP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>HP</span></button>
+                            <button id="base-FP" onclick="regSelectBase('FP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>FP</span></button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="app-card p-4 border-slate-200">
+                            <div class="flex justify-center items-center mb-4">
+                                <span class="relative flex items-center">
+                                    <i class="fas fa-building text-emerald-600 absolute right-[calc(100%+8px)]"></i>
+                                    <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none pt-0.5">02. 所属/建屋</label>
+                                </span>
+                            </div>
+                            <select id="reg-dept-select" onchange="onRegDeptChange()" disabled class="w-full h-12 px-2 rounded-lg bg-slate-50 border border-slate-200 font-bold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"></select>
+                        </div>
+                        <div class="app-card p-4 border-slate-200">
+                            <div class="flex justify-center items-center mb-4">
+                                <span class="relative flex items-center">
+                                    <i class="fas fa-door-open text-emerald-600 absolute right-[calc(100%+8px)]"></i>
+                                    <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none pt-0.5">03. 場所</label>
+                                </span>
+                            </div>
+                            <select id="reg-room-select" onchange="onRegRoomChange()" disabled class="w-full h-12 px-2 rounded-lg bg-slate-50 border border-slate-200 font-bold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t border-slate-200 pt-4 flex flex-col gap-4">
+                    <div id="reg-footer-actions"></div>
+                    <button id="btn-reg-back" class="w-full h-14 bg-slate-100 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 disabled:grayscale transition-all">
+                        <i class="fas fa-arrow-left"></i>戻る
+                    </button>
+                </div>
+            </div>
+
+            <div id="view-description" class="hidden h-full pb-32 text-center">
+                <div class="space-y-1.5">
+                    <div class="app-card p-4 px-1 border-orange-200 bg-orange-50 mt-4 mx-1">
+                        <p class="text-[13px] text-slate-700 leading-relaxed font-bold text-center tracking-tighter">
+                            廃棄物排出量を現場で即座に記録するためのツールです。<br>正確なデータ蓄積により環境負荷低減を支援します。
+                        </p>
+                    </div>
+                    <div class="space-y-1 px-2 text-left">
+                        <div class="flex items-start gap-4 p-2">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">1</div>
+                            <div class="flex-1 pt-1">
+                                <p class="font-bold text-slate-800 leading-none mb-1 text-sm">日付を選択</p>
+                                <p class="text-[11px] text-slate-500 text-justify">カレンダーの日付をタップすると閉じ、計量を開始できます。カレンダー部分は左右のフリックで月移動が可能です。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-2">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">2</div>
+                            <div class="flex-1 pt-1">
+                                <p class="font-bold text-slate-800 leading-none mb-1 text-sm">廃棄物の種別をタップして計量</p>
+                                <p class="text-[11px] text-slate-500 text-justify">廃棄物の種別を選択して数量を計量します。スライダー等で素早く計量が可能です。同じ所属内であれば、左右のフリックで場所を切り替えられます。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-2">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">3</div>
+                            <div class="flex-1 pt-1">
+                                <p class="font-bold text-slate-800 leading-none mb-1 text-sm">まとめて報告</p>
+                                <p class="text-[11px] text-slate-500 text-justify">計量後は下部の「報告する」ボタンを押し、一括送信します。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-2 flex flex-col gap-3">
+                        <button id="btn-feedback" class="w-full h-14 bg-slate-800 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform" onclick="openFeedbackForm()">
+                            <i class="fas fa-comment-dots"></i>フィードバックを送る
+                        </button>
+                        <button id="btn-back-description" class="w-full h-14 bg-slate-100 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2">
+                            <i class="fas fa-arrow-left"></i>戻る
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer id="footer-actions" class="fixed bottom-0 left-0 right-0 p-5 bg-white/95 backdrop-blur-md border-t border-slate-100 z-[1500]" style="display:none;">
+            <div class="max-w-md mx-auto flex gap-3">
+                <button id="btn-clear-changes" class="btn-clear-sub"><i class="fas fa-eraser"></i></button>
+                <button id="btn-save-report" class="flex-1 btn-action btn-report font-bold">
+                    <i class="fas fa-paper-plane text-blue-200"></i><span>報告する</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- トースト通知 -->
+    <div id="toast" onclick="hideToast()">
+        <i id="toast-icon"></i>
+        <span id="toast-text"></span>
+    </div>
+
+    <div id="server-bridge" style="display:none;" data-payload="<?!= initialPayload ?>" data-email="<?= userEmail ?>"></div>
+
+    <script>
+        if (typeof google === 'undefined') { 
+            window.google = { script: { run: { 
+                withSuccessHandler: function(cb) { this._s = cb; return this; }, 
+                registerUserSetting: function() { setTimeout(() => { if(this._s) this._s({success:true}); }, 500); }, 
+                executeSaveReport: function() { setTimeout(() => { if(this._s) this._s({success:true, user: 'demo@example.com', time: '2024/02/20 10:00:00'}); }, 500); } 
+            } } }; 
+        }
+
+        var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "" };
+        var inputValues = {}; var correctionValues = {};
+        var calendarViewDate = new Date(); var activeSliderCatId = null;
+        var iconTimer = null; 
+        var preSliderState = { input: 0, correction: 0 };
+        var toastTimer = null;
+
+        window.onload = initApp;
+
+        /**
+         * デモ用初期データの取得
+         * KP拠点のプレス室1向けにカテゴリを拡充
+         */
+        function getDemoData() {
+            return {
+                userExists: false,
+                locations: [
+                    { id: "1", name: "CR1", dept: "製造1", base: "HP" },
+                    { id: "kp1", name: "プレス室1", dept: "製造部", base: "KP" }
+                ],
+                categories: [
+                    { id: "1", name: "普通ごみ", targetBase: "", detail: "事務所のゴミ、弁当の容器、生ごみなど" },
+                    { id: "2", name: "廃プラスチック", targetBase: "", detail: "汚れていないプラスチック、ビニール、PPバンドなど" },
+                    { id: "3", name: "金属くず", targetBase: "KP", detail: "プレス加工で発生した金属の端材、バリ、抜きカスなど" },
+                    { id: "4", name: "ダンボール", targetBase: "", detail: "梱包材、空箱、中敷きの紙など" },
+                    { id: "5", name: "ウエス", targetBase: "", detail: "油の付着した布、汚れ拭きに使用したタオルなど" }
+                ],
+                feedbackUrl: "https://docs.google.com/forms/d/e/1FAIpQLSc2o-gFnK_IbLbFGZ86ryMLbY1A8hwJBkRYZ48dp4eO25CHMA/viewform?entry.176781763=%E5%BB%83%E6%A3%84%E7%89%A9%E5%A0%B1%E5%91%8A",
+                registeredData: {}, serverTime: Date.now()
+            };
+        }
+
+        function initApp() {
+            try {
+                var bridge = document.getElementById('server-bridge'); 
+                var rawPayload = bridge.getAttribute('data-payload'); 
+                var userEmail = bridge.getAttribute('data-email');
+                if (!userEmail || userEmail.indexOf('<' + '?') === 0) userEmail = "demo@mipox.co.jp";
+                var decoded;
+                if (!rawPayload || rawPayload.indexOf('<' + '?') === 0 || rawPayload === "undefined") { 
+                    decoded = getDemoData(); 
+                } else {
+                    try {
+                        var binary = atob(rawPayload); 
+                        var bytes = new Uint8Array(binary.length); 
+                        for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        decoded = JSON.parse(new TextDecoder().decode(bytes));
+                    } catch(e) { decoded = getDemoData(); }
+                }
+                Object.assign(state, decoded); 
+                state.serverTime = decoded.serverTime || Date.now(); 
+                calendarViewDate = new Date(state.serverTime);
+                setToday(false);
+                if (state.userExists && state.userSetting?.roomId) {
+                    state.isRegLocked = true;
+                    initRoomNavigation();
+                    showMainView();
+                } else {
+                    state.isRegLocked = false;
+                    showRegistrationView();
+                    showToast("初期設定を行ってください", "info");
+                }
+                document.getElementById('display-user-email').innerText = userEmail;
+                document.getElementById('global-user-avatar').src = "https://ui-avatars.com/api/?background=2563eb&color=fff&bold=true&name=" + encodeURIComponent(userEmail);
+                
+                setTimeout(() => {
+                    document.getElementById('loader').style.display = 'none'; 
+                    document.getElementById('app-content').classList.remove('hidden');
+                }, 100);
+
+                initEventListeners();
+                initSwipeSupport();
+            } catch (e) { document.getElementById('loader').style.display = 'none'; }
+        }
+
+        function openFeedbackForm() {
+            if (state.feedbackUrl) window.open(state.feedbackUrl, '_blank');
+            else showToast("URLが設定されていません", "warning");
+        }
+
+        function initRoomNavigation() {
+            if (!state.userSetting?.roomId) return;
+            var curRoomId = String(state.userSetting.roomId).trim();
+            var curRoom = state.locations.find(l => String(l.id).trim() === curRoomId);
+            if (!curRoom) return;
+            state.roomsInDept = state.locations.filter(l => l.dept.trim() === curRoom.dept.trim() && l.base.trim() === curRoom.base.trim());
+            state.activeRoomIndex = state.roomsInDept.findIndex(l => String(l.id).trim() === curRoomId);
+        }
+
+        function initEventListeners() {
+            var trigger = document.getElementById('app-icon-trigger');
+            var startHandler = function(e) { 
+                if (activeSliderCatId) return;
+                iconTimer = setTimeout(() => { iconTimer = null; if (checkUnsavedChanges()) showRegistrationView(); }, 600); 
+            };
+            var endHandler = function(e) { 
+                if (activeSliderCatId) return;
+                if (iconTimer) { clearTimeout(iconTimer); iconTimer = null; if (checkUnsavedChanges()) showDescriptionView(); } 
+            };
+            trigger.addEventListener('mousedown', startHandler);
+            trigger.addEventListener('mouseup', endHandler);
+            trigger.addEventListener('touchstart', startHandler, {passive: true});
+            trigger.addEventListener('touchend', endHandler, {passive: true});
+            document.getElementById('btn-avatar').addEventListener('click', function() { 
+                if (activeSliderCatId) return; if (checkUnsavedChanges()) showRegistrationView(); 
+            });
+            document.getElementById('btn-select-today').addEventListener('click', function(e) { e.stopPropagation(); if(!this.disabled) setToday(); });
+            document.getElementById('calendar-toggle-group').addEventListener('click', function() { if (activeSliderCatId) return; toggleCalendar(); });
+            document.getElementById('btn-prev-month').addEventListener('click', function() { animateMonthChange(-1); });
+            document.getElementById('btn-next-month').addEventListener('click', function() { animateMonthChange(1); });
+            document.getElementById('btn-close-slider').addEventListener('click', cancelSlider);
+            document.getElementById('btn-save-report').addEventListener('click', submitReport);
+            document.getElementById('btn-clear-changes').addEventListener('click', clearChanges);
+            document.getElementById('btn-reg-back').addEventListener('click', function() { if(!this.disabled) showMainView(false); });
+            document.getElementById('btn-back-description').addEventListener('click', function() { 
+                if (!state.userExists || !state.isRegLocked) showRegistrationView();
+                else showMainView(false); 
+            });
+            document.querySelectorAll('.btn-adjust').forEach(btn => {
+                btn.addEventListener('click', function() { adjustValue(parseInt(this.dataset.val)); });
+            });
+        }
+
+        function showToast(m, type = 'success') { 
+            if (toastTimer) clearTimeout(toastTimer);
+            var t = document.getElementById('toast'), tx = document.getElementById('toast-text'), ti = document.getElementById('toast-icon'); 
+            t.classList.remove('visible', 'toast-bottom', 'toast-top');
+            
+            if (type === 'warning') { 
+                ti.className = "fas fa-exclamation-triangle text-orange-400 text-2xl"; 
+                tx.innerHTML = m || "未報告のデータがあります<br>先に報告をしてください";
+                t.classList.add('toast-top');
+            } else {
+                if (type === 'info') {
+                    ti.className = "fas fa-rotate-left text-slate-400 text-2xl"; 
+                } else { 
+                    ti.className = "fas fa-check-circle text-emerald-400 text-2xl"; 
+                }
+                tx.innerHTML = m;
+                t.classList.add('toast-bottom');
+            }
+            
+            setTimeout(() => t.classList.add('visible'), 50);
+            var delay = (type === 'warning' || type === 'info') ? 3500 : 2500;
+            toastTimer = setTimeout(hideToast, delay); 
+        }
+
+        function hideToast() {
+            var t = document.getElementById('toast');
+            t.classList.remove('visible');
+            if (toastTimer) clearTimeout(toastTimer);
+        }
+
+        function checkUnsavedChanges() {
+            if (Object.keys(state.pendingChanges).length > 0) { showToast("", "warning"); return false; }
+            return true;
+        }
+
+        function syncHeaderStatus() {
+            var curRoomId = String(state.userSetting?.roomId || "").trim();
+            var room = state.locations.find(l => String(l.id).trim() === curRoomId); 
+            document.getElementById('badge-base').innerText = state.userSetting ? state.userSetting.base : "---"; 
+            document.getElementById('display-dept-short').innerText = room ? room.dept : "未設定";
+            document.getElementById('header-status-bar').style.display = 'flex';
+        }
+
+        function showDescriptionView() {
+            document.getElementById('app-body').classList.remove('is-main-view');
+            hideAllViews();
+            document.getElementById('view-description').classList.remove('hidden');
+            document.getElementById('sticky-description-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden');
+            syncHeaderStatus();
+        }
+
+        function hideAllViews() {
+            ['view-main', 'view-main-sticky', 'view-registration', 'view-description', 'sticky-calendar-bar', 'sticky-registration-bar', 'sticky-description-bar', 'header-status-bar', 'calendar-separator', 'footer-actions'].forEach(id => {
+                var el = document.getElementById(id);
+                if (el) { 
+                    if (id.startsWith('view') || id.startsWith('sticky')) el.classList.add('hidden'); 
+                    else el.style.display = 'none'; 
+                }
+            });
+        }
+
+        function showRegistrationView() { 
+            document.getElementById('app-body').classList.remove('is-main-view');
+            hideAllViews();
+            document.getElementById('view-registration').classList.remove('hidden'); 
+            document.getElementById('sticky-registration-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden');
+            syncHeaderStatus();
+            if (state.userSetting) { state.selectedRegBase = state.userSetting.base; updateRegUI(true); } 
+            else { state.selectedRegBase = null; state.isRegLocked = false; updateRegUI(); }
+        }
+
+        function showMainView(forceExpand = false) { 
+            document.getElementById('app-body').classList.add('is-main-view');
+            hideAllViews();
+            document.getElementById('view-main').classList.remove('hidden'); 
+            document.getElementById('view-main-sticky').classList.remove('hidden'); 
+            document.getElementById('sticky-calendar-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden');
+            syncHeaderStatus();
+            updateDateDisplay(); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
+            if (forceExpand) { var el = document.getElementById('calendar-expansion'); if (!el.classList.contains('open')) toggleCalendar(); }
+        }
+
+        function updateRegUI(isInit = false) {
+            var b = state.selectedRegBase ? state.selectedRegBase.trim() : null;
+            var isLocked = state.isRegLocked;
+            var btnBack = document.getElementById('btn-reg-back');
+            btnBack.disabled = !state.userExists || !isLocked;
+            var badge = document.getElementById('lock-badge');
+            badge.innerText = isLocked ? "LOCKED" : "UNLOCKED";
+            if (isLocked) {
+                badge.className = "absolute left-0 px-2 py-1 bg-slate-200 text-slate-500 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent";
+            } else {
+                badge.className = "absolute left-0 px-2 py-1 bg-emerald-50 text-emerald-900 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm today-striped border border-emerald-100 z-10";
+            }
+            ['KP', 'HP', 'FP'].forEach(id => { 
+                var el = document.getElementById(`base-${id}`);
+                if (el) {
+                    if (id.toUpperCase() === (b || "").toUpperCase()) el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-slate-200 border-2 border-slate-300 font-black text-xl text-slate-500 flex items-center justify-center cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-emerald-600 border-none font-black text-xl text-white flex items-center justify-center shadow-lg transform scale-105 transition-transform";
+                    else {
+                        el.className = "btn-base-select h-12 rounded-xl bg-white border border-slate-200 font-black text-xl text-slate-400 flex items-center justify-center transition-all";
+                        if (isLocked) el.classList.add('opacity-40', 'cursor-not-allowed');
+                    }
+                }
+            });
+            var dSel = document.getElementById('reg-dept-select'), rSel = document.getElementById('reg-room-select');
+            dSel.disabled = isLocked || !b; rSel.disabled = isLocked || !dSel.value;
+            if (!b) { 
+                dSel.innerHTML = '<option value="">未選択</option>'; 
+                rSel.innerHTML = '<option value="">未選択</option>'; 
+                rSel.value = "";
+            } else {
+                var depts = [...new Set(state.locations.filter(l => l.base.trim().toUpperCase() === b.toUpperCase()).map(l => (l.dept || "未分類").trim()))]; 
+                var currentVal = dSel.value;
+                dSel.innerHTML = '<option value="">選択してください</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+                if (isInit && state.userSetting) { 
+                    var curRoomId = String(state.userSetting.roomId).trim();
+                    var cur = state.locations.find(l => String(l.id).trim() === curRoomId); 
+                    if (cur) { dSel.value = cur.dept.trim(); onRegDeptChange(true); } 
+                } else if (!isInit && currentVal && depts.includes(currentVal)) { 
+                    dSel.value = currentVal; 
+                    onRegDeptChange(false); 
+                }
+            }
+            renderRegistrationFooter();
+        }
+
+        function renderRegistrationFooter() {
+            var cont = document.getElementById('reg-footer-actions');
+            if (state.isRegLocked) {
+                cont.innerHTML = `<button onclick=\"unlockReg()\" class=\"btn-action btn-dark font-bold\"><i class=\"fas fa-unlock mr-2\"></i>ロックを解除</button>`;
+            } else {
+                var b = state.selectedRegBase;
+                var d = document.getElementById('reg-dept-select').value;
+                var r = document.getElementById('reg-room-select').value;
+                var isValid = b && (d !== "" && d !== "選択してください") && (r !== "" && r !== "選択してください");
+                cont.innerHTML = `<button id=\"btn-reg-change\" onclick=\"submitRegistration()\" class=\"btn-action btn-dark text-white font-bold\" ${isValid ? '' : 'disabled'}><i class=\"fas fa-lock mr-2\"></i>この設定で保存する</button>`;
+            }
+        }
+
+        function unlockReg() { 
+            state.isRegLocked = false; 
+            document.getElementById('reg-dept-select').value = "";
+            document.getElementById('reg-room-select').value = "";
+            updateRegUI(); 
+        }
+
+        function regSelectBase(b) { 
+            if(state.isRegLocked) { return; }
+            state.selectedRegBase = b.trim();
+            document.getElementById('reg-dept-select').value = ""; 
+            document.getElementById('reg-room-select').value = "";
+            updateRegUI();
+            renderRegistrationFooter(); 
+        }
+
+        function onRegDeptChange(isInit = false) { 
+            var b = state.selectedRegBase ? state.selectedRegBase.trim() : null;
+            var d = document.getElementById('reg-dept-select').value;
+            var rSel = document.getElementById('reg-room-select'); 
+            
+            if (!d || d === "" || d === "選択してください" || !b) { 
+                rSel.disabled = true; 
+                rSel.innerHTML = '<option value="">未選択</option>'; 
+                rSel.value = "";
+            } else { 
+                rSel.disabled = state.isRegLocked; 
+                var rms = state.locations.filter(l => l.base.trim().toUpperCase() === b.toUpperCase() && (l.dept || "未分類").trim() === d.trim()); 
+                rSel.innerHTML = '<option value="">選択してください</option>' + rms.map(r => `<option value="${String(r.id).trim()}">${r.name}</option>`).join(''); 
+                
+                if (isInit && state.userSetting) {
+                    rSel.value = String(state.userSetting.roomId).trim(); 
+                } else {
+                    rSel.value = ""; 
+                }
+            } 
+            renderRegistrationFooter();
+        }
+
+        function onRegRoomChange() { 
+            renderRegistrationFooter(); 
+        }
+
+        function submitRegistration() { 
+            var rId = document.getElementById('reg-room-select').value;
+            var b = state.selectedRegBase;
+            var btn = document.getElementById('btn-reg-change');
+            if (!rId || rId === "" || !b) return;
+            if (btn) { 
+                btn.disabled = true; 
+                btn.innerHTML = '<i class="fas fa-circle-notch animate-spin mr-2"></i><span>保存中...</span>'; 
+            }
+            google.script.run.withSuccessHandler(function(res) { 
+                if (res && res.success) {
+                    state.userSetting = { base: b, roomId: rId }; state.userExists = true; state.isRegLocked = true;
+                    initRoomNavigation(); syncHeaderStatus(); showMainView(true); 
+                    showToast("設定を保存しました", "success"); 
+                } else { 
+                    showToast("保存失敗", "warning"); 
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock mr-2"></i>この設定で保存する'; }
+                }
+            }).registerUserSetting(b, rId); 
+        }
+
+        function handleInputFocus(el) { 
+            if (!el) return;
+            setTimeout(() => { el.focus(); }, 350); 
+        }
+
+        function openSlider(id, name) { 
+            activeSliderCatId = id; 
+            var curRoomId = String(state.userSetting?.roomId || "").trim();
+            preSliderState.input = inputValues[id] || 0;
+            var regVal = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[id] || 0;
+            preSliderState.correction = (correctionValues[id] !== undefined) ? correctionValues[id] : regVal;
+
+            document.getElementById('slider-cat-name').innerText = name; 
+            document.getElementById('slider-cat-id').innerText = "ID: " + id;
+            var room = state.locations.find(l => String(l.id).trim() === curRoomId);
+            document.getElementById('slider-location-name').innerText = room ? room.name : "---";
+            
+            if (correctionValues[id] === undefined) correctionValues[id] = regVal;
+            document.getElementById('registered-val-field').value = correctionValues[id].toFixed(1);
+            var curInput = inputValues[id] || 0;
+            document.getElementById('manual-input-field').value = curInput > 0 ? curInput.toFixed(1) : ""; 
+            
+            document.getElementById('edit-lock-toggle').checked = false;
+            document.getElementById('edit-lock-toggle').disabled = (regVal <= 0);
+            toggleEditLock(false);
+            
+            document.getElementById('slider-backdrop').classList.add('visible');
+            document.getElementById('slider-panel').style.display = 'block'; 
+            setTimeout(() => { document.getElementById('slider-panel').classList.add('visible'); }, 10); 
+        }
+
+        function updateSliderButtonState() {
+            var btn = document.getElementById('btn-confirm-slider');
+            if (!activeSliderCatId) { btn.disabled = true; return; }
+            var curRoomId = String(state.userSetting?.roomId || "").trim();
+            var origRegVal = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[activeSliderCatId] || 0;
+            var curInputVal = inputValues[activeSliderCatId] || 0;
+            var curCorrectionVal = correctionValues[activeSliderCatId] !== undefined ? correctionValues[activeSliderCatId] : origRegVal;
+            btn.disabled = !(curInputVal > 0 || Math.abs(curCorrectionVal - origRegVal) >= 0.01);
+        }
+
+        function toggleEditLock(checked) { 
+            var regField = document.getElementById('registered-val-field');
+            var manualField = document.getElementById('manual-input-field');
+            var slider = document.getElementById('input-slider');
+            var labelManual = document.getElementById('label-manual');
+            var labelRegistered = document.getElementById('label-registered');
+
+            if (checked) {
+                regField.disabled = false;
+                regField.classList.add('bg-blue-100', '!border-slate-900'); 
+                manualField.disabled = true;
+                manualField.classList.remove('bg-blue-100', '!border-slate-900');
+                labelManual.classList.add('opacity-40');
+                labelRegistered.classList.remove('opacity-40');
+                slider.value = Math.min(100, parseFloat(regField.value) || 0);
+                handleInputFocus(regField);
+            } else {
+                regField.disabled = true;
+                regField.classList.remove('bg-blue-100', '!border-slate-900');
+                manualField.disabled = false;
+                manualField.classList.add('bg-blue-100', '!border-slate-900');
+                labelManual.classList.remove('opacity-40');
+                labelRegistered.classList.add('opacity-40');
+                slider.value = Math.min(100, parseFloat(manualField.value) || 0);
+                handleInputFocus(manualField);
+            }
+            updateSliderButtonState();
+        }
+
+        function closeSlider() { 
+            document.getElementById('slider-panel').classList.remove('visible'); 
+            document.getElementById('slider-backdrop').classList.remove('visible');
+            if (activeSliderCatId && (inputValues[activeSliderCatId] > 0)) {
+                var el = document.getElementById('calendar-expansion');
+                if (el.classList.contains('open')) toggleCalendar(true); 
+            }
+            setTimeout(() => { if (!document.getElementById('slider-panel').classList.contains('visible')) document.getElementById('slider-panel').style.display = 'none'; }, 300); 
+            activeSliderCatId = null; renderCalendar(); 
+        }
+
+        function cancelSlider() {
+            if (activeSliderCatId) {
+                inputValues[activeSliderCatId] = preSliderState.input;
+                correctionValues[activeSliderCatId] = preSliderState.correction;
+                saveCurrentToCache();
+                renderCategoryCards();
+            }
+            closeSlider();
+        }
+
+        function adjustValue(n) { 
+            var isRegMode = document.getElementById('edit-lock-toggle').checked;
+            var fieldId = isRegMode ? 'registered-val-field' : 'manual-input-field';
+            var field = document.getElementById(fieldId);
+            var current = parseFloat(field.value) || 0;
+            var next = current + n;
+            if (!isRegMode && next < 0) next = 0;
+            field.value = next.toFixed(1);
+            if (isRegMode) onRegisteredValChange(next); else onManualInput(next);
+        }
+
+        function onManualInput(v) { 
+            var n = parseFloat(v); 
+            if (!isNaN(n)) { 
+                if (n < 0) { n = 0; document.getElementById('manual-input-field').value = "0.0"; }
+                document.getElementById('input-slider').value = Math.min(100, n); 
+                updateValues(n); 
+            } else { updateValues(0); } 
+        }
+
+        function onSliderInput(v) { 
+            var n = parseFloat(v); 
+            var isRegMode = document.getElementById('edit-lock-toggle').checked;
+            var fieldId = isRegMode ? 'registered-val-field' : 'manual-input-field';
+            document.getElementById(fieldId).value = n.toFixed(1);
+            if (isRegMode) onRegisteredValChange(n); else onManualInput(n);
+        }
+
+        function onRegisteredValChange(v) { 
+            var n = parseFloat(v); 
+            if (!isNaN(n) && activeSliderCatId) { 
+                correctionValues[activeSliderCatId] = n; 
+                saveCurrentToCache(); 
+                renderCategoryCards(); 
+                updateFooterVisibility(); 
+                updateSliderButtonState(); 
+                document.getElementById('input-slider').value = Math.min(100, n);
+            } 
+        }
+
+        function updateValues(n) { if (activeSliderCatId) { inputValues[activeSliderCatId] = n; saveCurrentToCache(); renderCategoryCards(); updateFooterVisibility(); updateSliderButtonState(); } }
+        
+        function saveCurrentToCache() {
+            var curRoomId = String(state.userSetting?.roomId || "").trim();
+            var hasChange = Object.values(inputValues).some(v => v > 0) || Object.keys(correctionValues).some(id => {
+                var orig = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[id] || 0;
+                return Math.abs(correctionValues[id] - orig) >= 0.01;
+            });
+            if (hasChange) state.pendingChanges[state.selectedDate] = { inputs: Object.assign({}, inputValues), corrections: Object.assign({}, correctionValues) };
+            else delete state.pendingChanges[state.selectedDate];
+        }
+
+        function updateFooterVisibility() { document.getElementById('footer-actions').style.display = Object.keys(state.pendingChanges).length > 0 ? 'block' : 'none'; }
+        
+        function clearChanges() {
+            if (Object.keys(state.pendingChanges).length === 0) return;
+            state.pendingChanges = {}; inputValues = {}; correctionValues = {};
+            renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
+            var el = document.getElementById('calendar-expansion');
+            if (!el.classList.contains('open')) toggleCalendar(true);
+            showToast("入力をクリアしました", "info");
+        }
+
+        function toggleCalendar(silentFeedback = false) { 
+            var el = document.getElementById('calendar-expansion'), icon = document.getElementById('cal-toggle-icon'); 
+            el.classList.toggle('open'); 
+            icon.style.transform = el.classList.contains('open') ? 'rotate(0deg)' : 'rotate(180deg)'; 
+            if (silentFeedback) {
+                var container = document.getElementById('cal-toggle-icon-container');
+                container.classList.add('!bg-emerald-600', '!text-white');
+                setTimeout(() => container.classList.remove('!bg-emerald-600', '!text-white'), 200);
+            }
+            renderCalendar(); 
+        }
+
+        function toggleHistory() {
+            var el = document.getElementById('history-expansion');
+            var icon = document.getElementById('history-icon');
+            var btnText = document.querySelector('#btn-toggle-history span');
+            el.classList.toggle('open');
+            if (el.classList.contains('open')) {
+                icon.className = "fas fa-chevron-up text-[10px]";
+                btnText.innerText = "履歴を閉じる";
+            } else {
+                icon.className = "fas fa-chevron-down text-[10px]";
+                btnText.innerText = "履歴を表示する";
+            }
+        }
+
+        function renderHistory() {
+            var listCont = document.getElementById('history-list');
+            var curRoomId = String(state.userSetting?.roomId || "").trim();
+            var dayData = state.registeredData[state.selectedDate]?.[curRoomId];
+            
+            if (!dayData || !dayData.logs || dayData.logs.length === 0) {
+                listCont.innerHTML = '<div class="text-center py-4 text-slate-400 text-sm font-bold">この日の登録データはありません</div>';
+                return;
+            }
+
+            var sortedLogs = [...dayData.logs].sort((a, b) => b.time.localeCompare(a.time));
+
+            var html = '<div class="flex flex-col gap-3">';
+            sortedLogs.forEach(log => {
+                var dtParts = log.time.split(' ');
+                var dateDisplay = dtParts.length > 0 ? dtParts[0].split('/').slice(1).join('/') : ''; 
+                var timeDisplay = dtParts.length > 1 ? dtParts[1].slice(0, 5) : ''; 
+                var fullTimeDisplay = dateDisplay + ' ' + timeDisplay;
+                
+                html += `
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-2">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded tracking-tighter">${fullTimeDisplay}</span>
+                                <span class="text-sm font-bold text-slate-800">${log.catName}</span>
+                            </div>
+                            <div class="flex items-baseline gap-0.5">
+                                <span class="text-lg font-black text-slate-900">${log.val.toFixed(1)}</span>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Kg</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 pt-1 border-t border-slate-50">
+                            <i class="fas fa-user text-[9px] text-slate-300"></i>
+                            <span class="text-[10px] font-bold text-slate-400 truncate flex-1">${log.user}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            listCont.innerHTML = html;
+        }
+        
+        function animateMonthChange(n) {
+            if (activeSliderCatId) return;
+            var wrapper = document.getElementById('calendar-slide-wrapper');
+            wrapper.style.transition = 'transform 0.3s ease-out'; wrapper.style.transform = n > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+            setTimeout(() => {
+                calendarViewDate.setMonth(calendarViewDate.getMonth() + n); renderCalendar();
+                wrapper.style.transition = 'none'; wrapper.style.transform = n > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+                setTimeout(() => { wrapper.style.transition = 'transform 0.3s ease-out'; wrapper.style.transform = 'translateX(0)'; }, 20);
+            }, 300);
+        }
+
+        function setToday(c = true) { 
+            var n = new Date(state.serverTime); 
+            calendarViewDate = new Date(n); 
+            selectDateFromCal(n.toISOString().split('T')[0], false); 
+        }
+
+        function updateTodayButtonState() {
+            var btn = document.getElementById('btn-select-today');
+            var todayStr = new Date(state.serverTime).toISOString().split('T')[0];
+            var isSelected = state.selectedDate === todayStr;
+
+            if (isSelected) {
+                btn.disabled = true;
+                btn.innerText = "今日"; 
+                btn.className = "px-2 py-1 rounded-lg text-sm font-black bg-slate-200 text-slate-500 border border-transparent shadow-none cursor-not-allowed transition-all";
+            } else {
+                btn.disabled = false;
+                btn.innerText = "今日を選択"; 
+                btn.className = "today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform cursor-pointer";
+            }
+        }
+        
+        function selectDateFromCal(ds, c = true) { 
+            if (activeSliderCatId) return;
+            state.selectedDate = ds; 
+            var cached = state.pendingChanges[ds] || { inputs: {}, corrections: {} };
+            inputValues = Object.assign({}, cached.inputs); correctionValues = Object.assign({}, cached.corrections);
+            updateDateDisplay(); 
+            updateTodayButtonState();
+            if (c && document.getElementById('calendar-expansion').classList.contains('open')) toggleCalendar(true); 
+            renderCalendar(); renderCategoryCards(); updateFooterVisibility(); renderHistory();
+        }
+
+        function renderCalendar() {
+            var grid = document.getElementById('calendar-grid'), y = calendarViewDate.getFullYear(), m = calendarViewDate.getMonth(); 
+            document.getElementById('calendar-title').innerText = y + "年 " + (m + 1) + "月";
+            grid.innerHTML = "";
+            var firstDate = new Date(y, m, 1), lastDate = new Date(y, m + 1, 0), firstDayIndex = firstDate.getDay(), prevMonthLastDate = new Date(y, m, 0).getDate();
+            var todayStr = new Date(state.serverTime).toISOString().split('T')[0], curRoomId = String(state.userSetting?.roomId || "").trim();
+            for (var i = firstDayIndex - 1; i >= 0; i--) grid.innerHTML += '<div class="aspect-square flex items-center justify-center text-slate-400 text-[10px] font-bold">' + (prevMonthLastDate - i) + '</div>';
+            for (var d = 1; d <= lastDate.getDate(); d++) {
+                var ds = y + "-" + ("0" + (m + 1)).slice(-2) + "-" + ("0" + d).slice(-2);
+                var isSelected = state.selectedDate === ds, isToday = ds === todayStr, reg = state.registeredData[ds]?.[curRoomId], pending = state.pendingChanges[ds];
+                var col = (new Date(y, m, d).getDay() === 0) ? "text-sunday" : (new Date(y, m, d).getDay() === 6 ? "text-saturday" : "text-[#334155]");
+                var styleClass = "aspect-square rounded-lg font-black text-sm flex flex-col items-center justify-center transition-all relative " + (isToday ? "today-striped " : (reg ? "bg-emerald-50 " : "bg-white ")) + (isSelected ? "border-2 border-emerald-600 text-emerald-700 " : "border border-transparent " + col);
+                var valHtml = '<div class="flex flex-col items-center">';
+                if (pending) {
+                    var origTotal = reg ? reg.total : 0;
+                    var pendingTotal = state.categories.reduce((acc, c) => {
+                        var c_orig = (reg && reg.cats) ? reg.cats[c.id] || 0 : 0;
+                        return acc + ((pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : c_orig) + (pending.inputs[c.id] || 0));
+                    }, 0);
+                    var diff = pendingTotal - origTotal;
+                    if (Math.abs(diff) >= 0.01) {
+                        var sign = diff > 0 ? "+" : "";
+                        var colorClass = diff > 0 ? "text-pending-plus" : "text-pending-minus";
+                        valHtml += `<div class="calendar-val-pending ${colorClass}">${sign}${diff.toFixed(1)}</div>`;
+                    }
+                } else if (reg && reg.total > 0) {
+                    valHtml += '<div class="calendar-val">' + reg.total.toFixed(1) + '</div>';
+                }
+                valHtml += '</div>';
+                grid.innerHTML += '<button id="cal-day-' + ds + '" class="' + styleClass + '">' + (pending ? '<div class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>' : '') + '<span>' + d + '</span>' + valHtml + '</button>';
+                (function(dStr) { setTimeout(() => { var b = document.getElementById('cal-day-'+dStr); if(b) b.onclick = function(){ selectDateFromCal(dStr); }; }, 0); })(ds);
+            }
+            for (var d = 1; d <= 6 - lastDate.getDay(); d++) grid.innerHTML += '<div class="aspect-square flex items-center justify-center text-slate-400 text-[10px] font-bold">' + d + '</div>';
+        }
+
+        function renderCategoryCards() {
+            var cont = document.getElementById('input-rows'), myB = state.userSetting?.base, curRoomId = String(state.userSetting?.roomId || "").trim();
+            var room = state.locations.find(l => String(l.id).trim() === curRoomId);
+            document.getElementById('current-room-display-name').innerText = "場所：" + (room ? room.name : "---");
+            var dotsCont = document.getElementById('room-dots-container');
+            if (dotsCont) dotsCont.innerHTML = state.roomsInDept.map((r, idx) => `<div class="w-1.5 h-1.5 rounded-full ${idx === state.activeRoomIndex ? 'bg-emerald-600' : 'bg-slate-200'}"></div>`).join('');
+            var reg = state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {};
+            var pending = state.pendingChanges[state.selectedDate];
+            
+            cont.innerHTML = state.categories.filter(c => !c.targetBase || c.targetBase.trim() === myB).map(c => {
+                var origVal = reg[c.id] || 0, baseVal = correctionValues[c.id] !== undefined ? correctionValues[c.id] : origVal, newVal = inputValues[c.id] || 0;
+                var displayVal = baseVal + newVal;
+                var diff = displayVal - origVal;
+                var isPending = Math.abs(diff) >= 0.01;
+                var cardBorder = isPending ? "border-2 border-orange-500 bg-orange-50/20" : (displayVal > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border border-slate-200 bg-white");
+                
+                var notationHtml = '';
+                if (isPending) {
+                    var sign = diff > 0 ? "+" : "";
+                    var color = diff > 0 ? "text-orange-500" : "text-blue-500";
+                    notationHtml = `<div style="padding-right: 1.5rem;" class="text-sm font-black ${color} leading-none mb-1">${sign}${diff.toFixed(1)}</div>`;
+                }
+
+                // ツールチップHTMLを生成 (c.detail がある場合のみ表示 / expansion-down設定)
+                var tooltipHtml = c.detail ? `
+                    <div class="relative group inline-block" onclick="event.stopPropagation()">
+                        <i class="fas fa-info-circle text-slate-400 text-sm pl-1.5 py-0.5 cursor-help"></i>
+                        <div class="absolute top-full right-0 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] w-[180px] p-2.5 bg-slate-800 text-white text-[11px] leading-relaxed rounded-lg shadow-xl pointer-events-none whitespace-normal text-left break-words font-medium tracking-wide">
+                            ${c.detail}
+                            <div class="absolute bottom-full right-2 border-[6px] border-transparent border-b-slate-800"></div>
+                        </div>
+                    </div>
+                ` : '';
+
+                return `
+                    <div id="cat-card-${c.id}" class="app-card p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all ${cardBorder}" onclick="openSlider('${c.id}', '${c.name}')">
+                        <div>
+                            <div class="flex items-start justify-between gap-1">
+                                <div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1">${c.name}</div>
+                                ${tooltipHtml}
+                            </div>
+                            <div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            ${notationHtml}
+                            <div class="flex items-baseline gap-1">
+                                <div class="text-3xl font-black text-[#1e293b] leading-none">${displayVal.toLocaleString(undefined,{minimumFractionDigits:1})}</div>
+                                <div class="text-xs font-bold text-slate-500">Kg</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function submitReport() {
+            var datesToSubmit = Object.keys(state.pendingChanges);
+            if (datesToSubmit.length === 0) return;
+            var btn = document.getElementById('btn-save-report'); 
+            btn.disabled = true; 
+            var curRoomId = String(state.userSetting?.roomId || "").trim();
+            var totalItemsCount = 0;
+            datesToSubmit.forEach(ds => {
+                var pending = state.pendingChanges[ds], reg = state.registeredData[ds]?.[curRoomId]?.cats || {};
+                var changedItems = state.categories.filter(c => {
+                    var orig = reg[c.id] || 0;
+                    var val = (pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : orig) + (pending.inputs[c.id] || 0);
+                    return Math.abs(val - orig) >= 0.01;
+                });
+                totalItemsCount += changedItems.length;
+            });
+            var processedItemsCount = 0;
+            for (var idx = 0; idx < datesToSubmit.length; idx++) {
+                var ds = datesToSubmit[idx];
+                var pending = state.pendingChanges[ds], reg = state.registeredData[ds]?.[curRoomId]?.cats || {};
+                var items = state.categories.map(c => {
+                    var orig = reg[c.id] || 0, val = (pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : orig) + (pending.inputs[c.id] || 0);
+                    return (Math.abs(val - orig) >= 0.01) ? { categoryId: c.id, categoryName: c.name, value: val.toFixed(1) } : null;
+                }).filter(x => x !== null);
+                if (items.length > 0) {
+                    processedItemsCount += items.length;
+                    btn.innerHTML = `<i class="fas fa-circle-notch animate-spin mr-2"></i><span>報告中... (廃棄物 ${processedItemsCount}/${totalItemsCount})</span>`;
+                    await new Promise(resolve => {
+                        google.script.run.withSuccessHandler((res) => {
+                            if (!state.registeredData[ds]) state.registeredData[ds] = {};
+                            if (!state.registeredData[ds][curRoomId]) state.registeredData[ds][curRoomId] = { total: 0, cats: {}, logs: [] };
+                            
+                            items.forEach(it => { 
+                                state.registeredData[ds][curRoomId].cats[it.categoryId] = parseFloat(it.value); 
+                                state.registeredData[ds][curRoomId].logs = state.registeredData[ds][curRoomId].logs.filter(l => l.catId !== it.categoryId);
+                                state.registeredData[ds][curRoomId].logs.push({
+                                    catId: it.categoryId,
+                                    catName: it.categoryName,
+                                    val: parseFloat(it.value),
+                                    user: res.user || '自分',
+                                    time: res.time || '今'
+                                });
+                            });
+                            
+                            state.registeredData[ds][curRoomId].total = Object.values(state.registeredData[ds][curRoomId].cats).reduce((a, b) => a + b, 0);
+                            if (ds === state.selectedDate) { inputValues = {}; correctionValues = {}; }
+                            delete state.pendingChanges[ds]; resolve();
+                        }).executeSaveReport({ date: ds, baseName: state.userSetting.base, roomId: curRoomId, items: items });
+                    });
+                } else delete state.pendingChanges[ds];
+            }
+            showToast("報告が完了しました"); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
+            if (!document.getElementById('calendar-expansion').classList.contains('open')) toggleCalendar(true);
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane text-blue-200"></i><span>報告する</span>';
+        }
+
+        function initSwipeSupport() {
+            var elCal = document.getElementById('calendar-expansion'), elCards = document.getElementById('input-rows-container'), startX = 0, startY = 0;
+            elCal.addEventListener('touchstart', e => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, {passive: true});
+            elCal.addEventListener('touchend', e => { var xDiff = e.changedTouches[0].clientX - startX; if (Math.abs(xDiff) > 50 && Math.abs(xDiff) > Math.abs(e.changedTouches[0].clientY - startY)) animateMonthChange(xDiff > 0 ? -1 : 1); }, {passive: true});
+            elCards.addEventListener('touchstart', e => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, {passive: true});
+            elCards.addEventListener('touchend', e => { var xDiff = e.changedTouches[0].clientX - startX; if (Math.abs(xDiff) > 50 && Math.abs(xDiff) > Math.abs(e.changedTouches[0].clientY - startY)) animateRoomSwitch(xDiff > 0 ? -1 : 1); }, {passive: true});
+        }
+
+        function animateRoomSwitch(dir) {
+            if (state.roomsInDept.length <= 1) return;
+            var nextIdx = state.activeRoomIndex + dir;
+            if (nextIdx < 0 || nextIdx >= state.roomsInDept.length) return;
+            var wrapper = document.getElementById('input-rows');
+            wrapper.style.transition = 'transform 0.3s ease-out'; wrapper.style.transform = dir > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+            setTimeout(() => {
+                state.activeRoomIndex = nextIdx; state.userSetting.roomId = String(state.roomsInDept[nextIdx].id).trim();
+                var cached = state.pendingChanges[state.selectedDate] || { inputs: {}, corrections: {} };
+                inputValues = Object.assign({}, cached.inputs); correctionValues = Object.assign({}, cached.corrections);
+                renderCategoryCards(); renderCalendar(); renderHistory();
+                wrapper.style.transition = 'none'; wrapper.style.transform = dir > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+                setTimeout(() => { wrapper.style.transition = 'transform 0.3s ease-out'; wrapper.style.transform = 'translateX(0)'; }, 20);
+            }, 300);
+        }
+
+        function updateDateDisplay() { if (state.selectedDate) { var pts = state.selectedDate.split("-"); if (pts.length === 3) document.getElementById('display-date').innerText = parseInt(pts[1]) + "月" + parseInt(pts[2]) + "日"; } }
+    </script>
+</body>
+</html>
