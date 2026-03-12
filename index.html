@@ -17,6 +17,9 @@
             overscroll-behavior: none; 
             -webkit-tap-highlight-color: transparent; 
         }
+        
+        /* 背面スクロールロック用クラス */
+        .lock-scroll { overflow: hidden !important; height: 100vh !important; }
 
         .loading-overlay { background: #ffffff; z-index: 9000; position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
         
@@ -53,7 +56,7 @@
         }
         .btn-clear-sub:active { background-color: #e2e8f0; transform: scale(0.95); }
 
-        .app-card { background: #ffffff; border-radius: 1rem; border: 1.5px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+        .app-card { background: #ffffff; border-radius: 1rem; border: 2px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
         
         #slider-panel { 
             display: none; 
@@ -174,17 +177,22 @@
     <div id="slider-panel" class="fixed bottom-0 left-0 right-0 p-6 pt-4 bg-white border-t border-slate-200 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[2.5rem]">
         <div class="max-w-md mx-auto flex flex-col gap-5">
             <div class="flex flex-col gap-3">
-                <div class="flex justify-between items-start w-full px-1">
-                    <div class="flex flex-col gap-1.5 flex-1 min-w-0 pr-2">
-                        <div class="flex items-baseline gap-2">
+                <div class="relative w-full px-1">
+                    <!-- ×ボタンの位置を上に、サイズを微調整 -->
+                    <button id="btn-close-slider" class="absolute -top-1 -right-1 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-transform z-10">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                    
+                    <div class="flex flex-col gap-1.5 w-full">
+                        <div class="flex items-center gap-2 flex-wrap pr-10"> <!-- ボタンと重ならないよう右に余白 -->
                             <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
                             <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
                         </div>
                         
-                        <!-- 詳細テキストエリア: 常に表示。斜体解除・色変更・サイズ1段アップ済み -->
-                        <div id="slider-cat-detail" class="hidden p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] leading-relaxed shadow-inner"></div>
+                        <!-- 詳細テキストエリア: 余白を広げ、横幅をボタン下まで拡張。縦幅を微減 -->
+                        <div id="slider-cat-detail" class="hidden mt-4 w-full py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] leading-relaxed shadow-inner"></div>
 
-                        <div class="flex items-center gap-1.5 text-slate-500">
+                        <div class="flex items-center gap-1.5 text-slate-500 mt-1">
                             <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
                             <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
                         </div>
@@ -196,7 +204,6 @@
                             <span id="edit-lock-label" class="text-sm font-bold text-slate-600">既登録分を修正する</span>
                         </div>
                     </div>
-                    <button id="btn-close-slider" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-transform flex-shrink-0"><i class="fas fa-times text-lg"></i></button>
                 </div>
             </div>
 
@@ -340,7 +347,7 @@
                         </button>
                         
                         <div id="history-expansion" class="w-full">
-                            <div class="app-card p-4 border-slate-200 bg-slate-50/50">
+                            <div class="app-card p-4 border-2 border-slate-200 bg-slate-50/50">
                                 <div id="history-list" class="space-y-4">
                                 </div>
                             </div>
@@ -355,7 +362,7 @@
                 </div>
                 <div class="border-b border-slate-200"></div>
                 <div class="mt-4 space-y-3 mb-4">
-                    <div class="app-card p-4 border-slate-200 relative overflow-hidden">
+                    <div class="app-card p-4 border-2 border-slate-200 relative overflow-hidden">
                         <div class="relative flex items-center justify-center mb-4 min-h-[28px]">
                             <span id="lock-badge" class="absolute left-0 px-2 py-1 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent">LOCKED</span>
                             <span class="relative flex items-center">
@@ -371,7 +378,7 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="app-card p-4 border-slate-200">
+                        <div class="app-card p-4 border-2 border-slate-200">
                             <div class="flex justify-center items-center mb-4">
                                 <span class="relative flex items-center">
                                     <i class="fas fa-building text-emerald-600 absolute right-[calc(100%+8px)]"></i>
@@ -380,7 +387,7 @@
                             </div>
                             <select id="reg-dept-select" onchange="onRegDeptChange()" disabled class="w-full h-12 px-2 rounded-lg bg-slate-50 border border-slate-200 font-bold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"></select>
                         </div>
-                        <div class="app-card p-4 border-slate-200">
+                        <div class="app-card p-4 border-2 border-slate-200">
                             <div class="flex justify-center items-center mb-4">
                                 <span class="relative flex items-center">
                                     <i class="fas fa-door-open text-emerald-600 absolute right-[calc(100%+8px)]"></i>
@@ -402,7 +409,7 @@
             <div id="view-description" class="hidden h-full pb-32 text-center">
                 <div class="space-y-1.5">
                     <div class="app-card p-4 px-1 border-orange-200 bg-orange-50 mt-4 mx-1">
-                        <p class="text-[13px] text-slate-700 leading-relaxed font-bold text-center tracking-tighter">
+                        <p class="text-sm text-slate-800 leading-relaxed font-bold text-center tracking-tighter">
                             廃棄物排出量を現場で即座に記録するためのツールです。<br>正確なデータ蓄積により環境負荷低減を支援します。
                         </p>
                     </div>
@@ -474,19 +481,46 @@
         var iconTimer = null; 
         var preSliderState = { input: 0, correction: 0 };
         var toastTimer = null;
+        var tooltipTimers = {}; // 吹き出し用のタイマー管理
 
         window.onload = initApp;
 
         /**
          * 拠点のフィルタリング判定用ヘルパー
-         * @param {Object} cat カテゴリ情報
-         * @param {String} base ユーザーが選択している拠点名
          */
         function isCategoryAllowed(cat, base) {
-            if (!cat.targetBase || cat.targetBase.trim() === "") return true; // 全拠点共通
+            if (!cat.targetBase || cat.targetBase.trim() === "") return true; 
             if (!base) return false;
             const targets = cat.targetBase.split(',').map(t => t.trim().toUpperCase());
             return targets.includes(base.trim().toUpperCase());
+        }
+
+        /**
+         * 吹き出し（詳細オーバーレイ）を表示し、3秒後に自動で非表示にする
+         */
+        function showTooltip(id, e) {
+            if (e) e.stopPropagation();
+            const el = document.getElementById(`tooltip-${id}`);
+            if (!el) return;
+            
+            // 他の吹き出しを全て隠す
+            document.querySelectorAll('[id^="tooltip-"]').forEach(t => {
+                if (t.id !== `tooltip-${id}`) {
+                    t.classList.add('invisible', 'opacity-0');
+                    t.classList.remove('visible', 'opacity-100');
+                }
+            });
+
+            // 対象の吹き出しを表示
+            el.classList.remove('invisible', 'opacity-0');
+            el.classList.add('visible', 'opacity-100');
+
+            // 3秒タイマー設定
+            if (tooltipTimers[id]) clearTimeout(tooltipTimers[id]);
+            tooltipTimers[id] = setTimeout(() => {
+                el.classList.add('invisible', 'opacity-0');
+                el.classList.remove('visible', 'opacity-100');
+            }, 3000);
         }
 
         function getDemoData() {
@@ -610,6 +644,8 @@
                 t.classList.add('toast-top');
             } else {
                 if (type === 'info') {
+                    ti.className = "fas fa-circle-info text-blue-400 text-2xl"; 
+                } else if (type === 'reset') {
                     ti.className = "fas fa-rotate-left text-slate-400 text-2xl"; 
                 } else { 
                     ti.className = "fas fa-check-circle text-emerald-400 text-2xl"; 
@@ -619,7 +655,7 @@
             }
             
             setTimeout(() => t.classList.add('visible'), 50);
-            var delay = (type === 'warning' || type === 'info') ? 3500 : 2500;
+            var delay = (type === 'warning' || type === 'info' || type === 'reset') ? 3500 : 2500;
             toastTimer = setTimeout(hideToast, delay); 
         }
 
@@ -684,7 +720,10 @@
             renderCategoryCards(); 
             renderCalendar(); 
             updateFooterVisibility(); 
+            
+            // 高速化案3: 履歴描画をわずかに遅延させメインUIの応答性を優先
             setTimeout(renderHistory, 10);
+
             if (forceExpand) { var el = document.getElementById('calendar-expansion'); if (!el.classList.contains('open')) toggleCalendar(); }
         }
 
@@ -826,7 +865,7 @@
             var room = state.locations.find(l => String(l.id).trim() === curRoomId);
             document.getElementById('slider-location-name').innerText = room ? room.name : "---";
             
-            // カテゴリ詳細を最初から表示
+            // カテゴリ詳細の表示制御: 常に表示し、フォントスタイルを更新
             var catObj = state.categories.find(c => String(c.id).trim() === String(id).trim());
             var detailArea = document.getElementById('slider-cat-detail');
             if (catObj && catObj.detail) {
@@ -845,8 +884,8 @@
             document.getElementById('edit-lock-toggle').disabled = (regVal <= 0);
             toggleEditLock(false);
             
-            // 背面スクロール抑止
-            document.body.style.overflow = 'hidden';
+            // 背面スクロール抑止: bodyにロック用クラスを付与
+            document.body.classList.add('lock-scroll');
 
             document.getElementById('slider-backdrop').classList.add('visible');
             document.getElementById('slider-panel').style.display = 'block'; 
@@ -901,7 +940,7 @@
             }
             
             // スクロール制限解除
-            document.body.style.overflow = '';
+            document.body.classList.remove('lock-scroll');
 
             setTimeout(() => { if (!document.getElementById('slider-panel').classList.contains('visible')) document.getElementById('slider-panel').style.display = 'none'; }, 300); 
             activeSliderCatId = null; renderCalendar(); 
@@ -913,7 +952,7 @@
                 correctionValues[activeSliderCatId] = preSliderState.correction;
                 saveCurrentToCache();
                 renderCategoryCards();
-                updateFooterVisibility(); // 報告内容の状態に合わせてボタンの表示・非表示を更新
+                updateFooterVisibility();
             }
             closeSlider();
         }
@@ -976,7 +1015,7 @@
             if (Object.keys(state.pendingChanges).length === 0) return;
             state.pendingChanges = {}; inputValues = {}; correctionValues = {};
             renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
-            showToast("入力をクリアしました", "info");
+            showToast("入力をクリアしました", "reset");
         }
 
         function toggleCalendar(silentFeedback = false) { 
@@ -1019,13 +1058,22 @@
 
             var html = '<div class="flex flex-col gap-3">';
             sortedLogs.forEach(log => {
-                var dtParts = log.time.split(' ');
-                var dateDisplay = dtParts.length > 0 ? dtParts[0].split('/').slice(1).join('/') : ''; 
-                var timeDisplay = dtParts.length > 1 ? dtParts[1].slice(0, 5) : ''; 
-                var fullTimeDisplay = dateDisplay + ' ' + timeDisplay;
+                var fullTimeDisplay = "---";
+                if (log.time) {
+                    var dtParts = log.time.split(' '); // ["2024/03/12", "15:45:00"]
+                    if (dtParts.length >= 2) {
+                        var datePart = dtParts[0].split(/\/|-/).slice(1).join('/'); // MM/DD (/-対応)
+                        var timePart = dtParts[1].slice(0, 5); // HH:mm
+                        fullTimeDisplay = datePart + ' ' + timePart;
+                    } else if (dtParts.length === 1 && (log.time.includes('/') || log.time.includes('-'))) {
+                        fullTimeDisplay = log.time.split(/\/|-/).slice(1).join('/');
+                    } else {
+                        fullTimeDisplay = log.time;
+                    }
+                }
                 
                 html += `
-                    <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-2">
+                    <div class="bg-white p-3 rounded-xl border-2 border-slate-100 shadow-sm flex flex-col gap-2">
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-2">
                                 <span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded tracking-tighter">${fullTimeDisplay}</span>
@@ -1144,37 +1192,48 @@
                 var displayVal = baseVal + newVal;
                 var diff = displayVal - origVal;
                 var isPending = Math.abs(diff) >= 0.01;
-                var cardBorder = isPending ? "border-2 border-orange-500 bg-orange-50/20" : (displayVal > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border border-slate-200 bg-white");
+                
+                // ガタつき防止のため、常に border-2 を適用し、色だけを変更
+                var cardBorder = isPending ? "border-2 border-orange-500 bg-orange-50/20" : (displayVal > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border-2 border-slate-200 bg-white");
                 
                 var notationHtml = '';
                 if (isPending) {
                     var sign = diff > 0 ? "+" : "";
                     var color = diff > 0 ? "text-orange-500" : "text-blue-500";
-                    notationHtml = `<div style="padding-right: 1.5rem;" class="text-sm font-black ${color} leading-none mb-1">${sign}${diff.toFixed(1)}</div>`;
+                    notationHtml = `<span class="text-sm font-black ${color} leading-none">${sign}${diff.toFixed(1)}</span>`;
                 }
 
-                // 「ツールチップ正解.html」のロジックに基づく吹き出し (中央配置)
+                // カード内オーバーレイ詳細 (中央配置・3秒表示・カレンダーの下に潜るようz-10に指定)
                 var tooltipHtml = c.detail ? `
-                    <div class="relative group inline-block" onclick="event.stopPropagation()">
-                        <i class="fas fa-info-circle text-slate-400 text-sm pl-1.5 py-0.5 cursor-help"></i>
-                        <div class="absolute top-full right-0 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] w-[180px] p-2.5 bg-slate-800 text-white text-[11px] leading-relaxed rounded-lg shadow-xl pointer-events-none whitespace-normal text-left break-words font-medium tracking-wide">
-                            ${c.detail}
-                            <div class="absolute bottom-full right-2 border-[6px] border-transparent border-b-slate-800"></div>
-                        </div>
+                    <div id="tooltip-${c.id}" class="absolute inset-3 bg-slate-900/90 text-white rounded-lg flex items-center justify-center p-2 opacity-0 invisible transition-all duration-200 z-10 pointer-events-none text-center">
+                        <p class="text-[12px] leading-snug font-medium">${c.detail}</p>
+                    </div>
+                ` : '';
+
+                // アイコンをfa-solid fa-circle-infoに変更。items-centerで廃棄物名ラベルと垂直中央揃え
+                var infoIconHtml = c.detail ? `
+                    <div class="cursor-help flex items-center" onclick="showTooltip('${c.id}', event)">
+                        <i class="fa-solid fa-circle-info text-slate-300 text-[15px]"></i>
                     </div>
                 ` : '';
 
                 return `
-                    <div id="cat-card-${c.id}" class="app-card p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all ${cardBorder}" onclick="openSlider('${c.id}', '${c.name}')">
+                    <div id="cat-card-${c.id}" class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all overflow-hidden ${cardBorder}" onclick="openSlider('${c.id}', '${c.name}')">
+                        ${tooltipHtml}
                         <div>
-                            <div class="flex items-start justify-between gap-1">
-                                <div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1">${c.name}</div>
-                                ${tooltipHtml}
+                            <!-- items-centerにより、詳細アイコンと廃棄物名ラベルが垂直中央で揃うように修正 -->
+                            <div class="flex items-center justify-between gap-1">
+                                <div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1 pr-1">${c.name}</div>
+                                ${infoIconHtml}
                             </div>
                             <div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div>
                         </div>
-                        <div class="flex flex-col items-end">
-                            ${notationHtml}
+                        <!-- 重量表示エリア -->
+                        <div class="flex flex-col items-end pb-1.5 relative">
+                            <!-- 差分表示 (+xx): Kg表示の上部に絶対配置することで、Kg表示の垂直位置を固定 -->
+                            <div class="absolute bottom-full right-6 mb-0.5 whitespace-nowrap">
+                                ${notationHtml}
+                            </div>
                             <div class="flex items-baseline gap-1">
                                 <div class="text-3xl font-black text-[#1e293b] leading-none">${displayVal.toLocaleString(undefined,{minimumFractionDigits:1})}</div>
                                 <div class="text-xs font-bold text-slate-500">Kg</div>
