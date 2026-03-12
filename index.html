@@ -176,14 +176,15 @@
             <div class="flex flex-col gap-3">
                 <div class="flex justify-between items-start w-full px-1">
                     <div class="flex flex-col gap-1.5 flex-1 min-w-0 pr-2">
-                        <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-baseline gap-2">
                             <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
                             <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
                         </div>
-                        <!-- 詳細テキストエリア: フォントサイズアップ・色変更・斜体解除 -->
-                        <div id="slider-cat-detail" class="hidden p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] leading-relaxed shadow-inner"></div>
                         
-                        <div class="flex items-center gap-1.5 text-slate-500 mt-1">
+                        <!-- 詳細テキストエリア: 常に表示。斜体解除・色変更・サイズ1段アップ済み -->
+                        <div id="slider-cat-detail" class="hidden p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] leading-relaxed shadow-inner"></div>
+
+                        <div class="flex items-center gap-1.5 text-slate-500">
                             <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
                             <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
                         </div>
@@ -823,7 +824,7 @@
             var room = state.locations.find(l => String(l.id).trim() === curRoomId);
             document.getElementById('slider-location-name').innerText = room ? room.name : "---";
             
-            // カテゴリ詳細の表示制御: 常に表示し、フォントスタイルを更新
+            // カテゴリ詳細を最初から表示
             var catObj = state.categories.find(c => String(c.id).trim() === String(id).trim());
             var detailArea = document.getElementById('slider-cat-detail');
             if (catObj && catObj.detail) {
@@ -842,10 +843,8 @@
             document.getElementById('edit-lock-toggle').disabled = (regVal <= 0);
             toggleEditLock(false);
             
-            // 背面スクロール抑止: bodyとメインコンテナ両方を制限
+            // 背面スクロール抑止
             document.body.style.overflow = 'hidden';
-            var mainContent = document.getElementById('app-content');
-            if(mainContent) mainContent.style.overflow = 'hidden';
 
             document.getElementById('slider-backdrop').classList.add('visible');
             document.getElementById('slider-panel').style.display = 'block'; 
@@ -901,8 +900,6 @@
             
             // スクロール制限解除
             document.body.style.overflow = '';
-            var mainContent = document.getElementById('app-content');
-            if(mainContent) mainContent.style.overflow = '';
 
             setTimeout(() => { if (!document.getElementById('slider-panel').classList.contains('visible')) document.getElementById('slider-panel').style.display = 'none'; }, 300); 
             activeSliderCatId = null; renderCalendar(); 
@@ -1154,12 +1151,13 @@
                     notationHtml = `<div style="padding-right: 1.5rem;" class="text-sm font-black ${color} leading-none mb-1">${sign}${diff.toFixed(1)}</div>`;
                 }
 
+                // 「ツールチップ正解.html」のロジックに基づく吹き出し (中央配置)
                 var tooltipHtml = c.detail ? `
                     <div class="relative group inline-block" onclick="event.stopPropagation()">
                         <i class="fas fa-info-circle text-slate-400 text-sm pl-1.5 py-0.5 cursor-help"></i>
-                        <div class="absolute top-full right-0 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] w-[180px] p-2.5 bg-slate-800 text-white text-[11px] leading-relaxed rounded-lg shadow-xl pointer-events-none whitespace-normal text-left break-words font-medium tracking-wide">
+                        <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] w-[180px] p-2.5 bg-slate-800 text-white text-[11px] leading-relaxed rounded-lg shadow-xl pointer-events-none whitespace-normal text-left break-words font-medium tracking-wide">
                             ${c.detail}
-                            <div class="absolute bottom-full right-2 border-[6px] border-transparent border-b-slate-800"></div>
+                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-b-slate-800"></div>
                         </div>
                     </div>
                 ` : '';
