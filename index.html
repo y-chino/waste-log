@@ -176,11 +176,14 @@
             <div class="flex flex-col gap-3">
                 <div class="flex justify-between items-start w-full px-1">
                     <div class="flex flex-col gap-1.5 flex-1 min-w-0 pr-2">
-                        <div class="flex items-baseline gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
                             <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
                         </div>
-                        <div class="flex items-center gap-1.5 text-slate-500">
+                        <!-- 詳細テキストエリア: フォントサイズアップ・色変更・斜体解除 -->
+                        <div id="slider-cat-detail" class="hidden p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] leading-relaxed shadow-inner"></div>
+                        
+                        <div class="flex items-center gap-1.5 text-slate-500 mt-1">
                             <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
                             <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
                         </div>
@@ -453,7 +456,6 @@
         <span id="toast-text"></span>
     </div>
 
-    <!-- 高速化案2: data-payload属性をシングルクォートで囲みJSON直接埋め込みに対応 -->
     <div id="server-bridge" style="display:none;" data-payload='<?!= initialPayload ?>' data-email="<?= userEmail ?>"></div>
 
     <script>
@@ -515,7 +517,6 @@
                     decoded = getDemoData(); 
                 } else {
                     try {
-                        // 高速化案2: Base64デコードをスキップして直接パース
                         decoded = JSON.parse(rawPayload);
                     } catch(e) { 
                         decoded = getDemoData(); 
@@ -680,10 +681,7 @@
             renderCategoryCards(); 
             renderCalendar(); 
             updateFooterVisibility(); 
-            
-            // 高速化案3: 履歴描画をわずかに遅延させメインUIの応答性を優先
             setTimeout(renderHistory, 10);
-
             if (forceExpand) { var el = document.getElementById('calendar-expansion'); if (!el.classList.contains('open')) toggleCalendar(); }
         }
 
@@ -825,6 +823,16 @@
             var room = state.locations.find(l => String(l.id).trim() === curRoomId);
             document.getElementById('slider-location-name').innerText = room ? room.name : "---";
             
+            // カテゴリ詳細の表示制御: 常に表示し、フォントスタイルを更新
+            var catObj = state.categories.find(c => String(c.id).trim() === String(id).trim());
+            var detailArea = document.getElementById('slider-cat-detail');
+            if (catObj && catObj.detail) {
+                detailArea.innerText = catObj.detail;
+                detailArea.classList.remove('hidden');
+            } else {
+                detailArea.classList.add('hidden');
+            }
+
             if (correctionValues[id] === undefined) correctionValues[id] = regVal;
             document.getElementById('registered-val-field').value = correctionValues[id].toFixed(1);
             var curInput = inputValues[id] || 0;
@@ -834,6 +842,11 @@
             document.getElementById('edit-lock-toggle').disabled = (regVal <= 0);
             toggleEditLock(false);
             
+            // 背面スクロール抑止: bodyとメインコンテナ両方を制限
+            document.body.style.overflow = 'hidden';
+            var mainContent = document.getElementById('app-content');
+            if(mainContent) mainContent.style.overflow = 'hidden';
+
             document.getElementById('slider-backdrop').classList.add('visible');
             document.getElementById('slider-panel').style.display = 'block'; 
             setTimeout(() => { document.getElementById('slider-panel').classList.add('visible'); }, 10); 
@@ -885,6 +898,12 @@
                 var el = document.getElementById('calendar-expansion');
                 if (el.classList.contains('open')) toggleCalendar(true); 
             }
+            
+            // スクロール制限解除
+            document.body.style.overflow = '';
+            var mainContent = document.getElementById('app-content');
+            if(mainContent) mainContent.style.overflow = '';
+
             setTimeout(() => { if (!document.getElementById('slider-panel').classList.contains('visible')) document.getElementById('slider-panel').style.display = 'none'; }, 300); 
             activeSliderCatId = null; renderCalendar(); 
         }
