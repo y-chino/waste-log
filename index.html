@@ -479,9 +479,11 @@
 
         /**
          * 拠点のフィルタリング判定用ヘルパー
+         * @param {Object} cat カテゴリ情報
+         * @param {String} base ユーザーが選択している拠点名
          */
         function isCategoryAllowed(cat, base) {
-            if (!cat.targetBase || cat.targetBase.trim() === "") return true; 
+            if (!cat.targetBase || cat.targetBase.trim() === "") return true; // 全拠点共通
             if (!base) return false;
             const targets = cat.targetBase.split(',').map(t => t.trim().toUpperCase());
             return targets.includes(base.trim().toUpperCase());
@@ -911,7 +913,7 @@
                 correctionValues[activeSliderCatId] = preSliderState.correction;
                 saveCurrentToCache();
                 renderCategoryCards();
-                updateFooterVisibility();
+                updateFooterVisibility(); // 報告内容の状態に合わせてボタンの表示・非表示を更新
             }
             closeSlider();
         }
@@ -1155,9 +1157,9 @@
                 var tooltipHtml = c.detail ? `
                     <div class="relative group inline-block" onclick="event.stopPropagation()">
                         <i class="fas fa-info-circle text-slate-400 text-sm pl-1.5 py-0.5 cursor-help"></i>
-                        <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] w-[180px] p-2.5 bg-slate-800 text-white text-[11px] leading-relaxed rounded-lg shadow-xl pointer-events-none whitespace-normal text-left break-words font-medium tracking-wide">
+                        <div class="absolute top-full right-0 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] w-[180px] p-2.5 bg-slate-800 text-white text-[11px] leading-relaxed rounded-lg shadow-xl pointer-events-none whitespace-normal text-left break-words font-medium tracking-wide">
                             ${c.detail}
-                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-b-slate-800"></div>
+                            <div class="absolute bottom-full right-2 border-[6px] border-transparent border-b-slate-800"></div>
                         </div>
                     </div>
                 ` : '';
