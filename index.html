@@ -453,7 +453,8 @@
         <span id="toast-text"></span>
     </div>
 
-    <div id="server-bridge" style="display:none;" data-payload="<?!= initialPayload ?>" data-email="<?= userEmail ?>"></div>
+    <!-- 高速化案2: data-payload属性をシングルクォートで囲みJSON直接埋め込みに対応 -->
+    <div id="server-bridge" style="display:none;" data-payload='<?!= initialPayload ?>' data-email="<?= userEmail ?>"></div>
 
     <script>
         if (typeof google === 'undefined') { 
@@ -475,11 +476,9 @@
 
         /**
          * 拠点のフィルタリング判定用ヘルパー
-         * @param {Object} cat カテゴリ情報
-         * @param {String} base ユーザーが選択している拠点名
          */
         function isCategoryAllowed(cat, base) {
-            if (!cat.targetBase || cat.targetBase.trim() === "") return true; // 全拠点共通
+            if (!cat.targetBase || cat.targetBase.trim() === "") return true; 
             if (!base) return false;
             const targets = cat.targetBase.split(',').map(t => t.trim().toUpperCase());
             return targets.includes(base.trim().toUpperCase());
@@ -510,16 +509,17 @@
                 var rawPayload = bridge.getAttribute('data-payload'); 
                 var userEmail = bridge.getAttribute('data-email');
                 if (!userEmail || userEmail.indexOf('<' + '?') === 0) userEmail = "demo@mipox.co.jp";
+                
                 var decoded;
-                if (!rawPayload || rawPayload.indexOf('<' + '?') === 0 || rawPayload === "undefined") { 
+                if (!rawPayload || rawPayload.indexOf('<' + '?') === 0 || rawPayload === "undefined" || rawPayload === "") { 
                     decoded = getDemoData(); 
                 } else {
                     try {
-                        var binary = atob(rawPayload); 
-                        var bytes = new Uint8Array(binary.length); 
-                        for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                        decoded = JSON.parse(new TextDecoder().decode(bytes));
-                    } catch(e) { decoded = getDemoData(); }
+                        // 高速化案2: Base64デコードをスキップして直接パース
+                        decoded = JSON.parse(rawPayload);
+                    } catch(e) { 
+                        decoded = getDemoData(); 
+                    }
                 }
                 Object.assign(state, decoded); 
                 state.serverTime = decoded.serverTime || Date.now(); 
@@ -676,7 +676,14 @@
             document.getElementById('sticky-calendar-bar').classList.remove('hidden');
             document.getElementById('calendar-separator').classList.remove('hidden');
             syncHeaderStatus();
-            updateDateDisplay(); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
+            updateDateDisplay(); 
+            renderCategoryCards(); 
+            renderCalendar(); 
+            updateFooterVisibility(); 
+            
+            // 高速化案3: 履歴描画をわずかに遅延させメインUIの応答性を優先
+            setTimeout(renderHistory, 10);
+
             if (forceExpand) { var el = document.getElementById('calendar-expansion'); if (!el.classList.contains('open')) toggleCalendar(); }
         }
 
@@ -888,7 +895,7 @@
                 correctionValues[activeSliderCatId] = preSliderState.correction;
                 saveCurrentToCache();
                 renderCategoryCards();
-                updateFooterVisibility(); // 報告内容の状態に合わせてボタンの表示・非表示を更新
+                updateFooterVisibility();
             }
             closeSlider();
         }
@@ -951,7 +958,6 @@
             if (Object.keys(state.pendingChanges).length === 0) return;
             state.pendingChanges = {}; inputValues = {}; correctionValues = {};
             renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
-            // カレンダーを強制的に開かないように変更（日付選択状態を維持）
             showToast("入力をクリアしました", "info");
         }
 
