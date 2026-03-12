@@ -1,5 +1,5 @@
 /**
- * 廃棄物報告アプリ - Backend Logic (v1.0.5)
+ * 廃棄物報告アプリ - Backend Logic (v1.0.5 - Optimized)
  */
 
 var APP_TITLE = "廃棄物報告";
@@ -21,16 +21,8 @@ function doGet() {
   
   var initialData = getInitialDataForApp_(userEmail);
   
-  var payload = "";
-  try {
-    var jsonStr = JSON.stringify(initialData);
-    var blob = Utilities.newBlob(jsonStr, "application/json");
-    payload = Utilities.base64Encode(blob.getBytes());
-  } catch(e) {
-    payload = "ERROR_ENCODE:" + e.message;
-  }
-  
-  template.initialPayload = payload;
+  // 高速化案2: Base64エンコードを廃止し、直接JSONを渡す（エスケープ処理込み）
+  template.initialPayload = JSON.stringify(initialData);
   template.userEmail = userEmail;
   
   return template.evaluate()
@@ -98,30 +90,40 @@ function getInitialDataForApp_(userEmail) {
     }
   }
 
-  // 5. 登録済みデータ取得（直近30日分程度に制限してパフォーマンス向上させることも可能だが、現在は全量）
-  // 構造: { "yyyy-MM-dd": { "roomId": { total: X, cats: { "catId": val }, logs: [...] } } }
+  // 5. 登録済みデータ取得
+  // 高速化案1: 過去3ヶ月分（約90日）より古いデータは初期読込対象外とする
   var wasteSheet = ss.getSheetByName(SHEETS.DATA);
   var wasteData = wasteSheet.getDataRange().getValues();
   var registeredData = {};
   
-  for (var n = 1; n < wasteData.length; n++) {
+  var thresholdDate = new Date();
+  thresholdDate.setMonth(thresholdDate.getMonth() - 3); 
+  
+  // 新しい順に走査することで最新値を優先取得
+  for (var n = wasteData.length - 1; n >= 1; n--) { 
     var row = wasteData[n];
+    var rawDate = new Date(row[4]);
+    
+    // 3ヶ月以前のデータはスキップ（初期読込の通信量削減）
+    if (rawDate < thresholdDate) continue;
+
     var catId = String(row[1]);
     var catName = String(row[2]);
     var val = parseFloat(row[3]);
-    var dateStr = Utilities.formatDate(new Date(row[4]), "JST", "yyyy-MM-dd");
+    var dateStr = Utilities.formatDate(rawDate, "JST", "yyyy-MM-dd");
     var roomId = String(row[6]);
     var user = String(row[12]);
-    var time = String(row[13]); // フォーマット済み文字列を想定
+    var time = String(row[13]); 
 
     if (!registeredData[dateStr]) registeredData[dateStr] = {};
     if (!registeredData[dateStr][roomId]) {
       registeredData[dateStr][roomId] = { total: 0, cats: {}, logs: [] };
     }
     
-    // カテゴリごとの最新値（または合計）を保持
-    // 現在の仕様は「最新の上書き」を想定しているが、必要に応じて加算に変更可能
-    registeredData[dateStr][roomId].cats[catId] = val;
+    // カテゴリごとの値を保持（逆順走査なので最初の1件が最新）
+    if (registeredData[dateStr][roomId].cats[catId] === undefined) {
+      registeredData[dateStr][roomId].cats[catId] = val;
+    }
     registeredData[dateStr][roomId].logs.push({
       catId: catId,
       catName: catName,
@@ -203,7 +205,6 @@ function executeSaveReport(formData) {
   var formattedNow = Utilities.formatDate(now, "JST", "yyyy/MM/dd HH:mm:ss");
   var dateNumStr = formData.date.replace(/-/g, "");
 
-  // 既存データの検索と更新、または新規追加
   var lastRow = sheet.getLastRow();
   var dataValues = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 15).getValues() : [];
   var startRow = 2;
@@ -214,7 +215,6 @@ function executeSaveReport(formData) {
     if (isNaN(inputVal) || inputVal <= 0) continue;
     
     var matchedIdx = -1;
-    // 同じ日付・同じ場所・同じカテゴリの既存レコードを後ろから検索
     for (var k = dataValues.length - 1; k >= 0; k--) {
       if (String(dataValues[k][11]).replace(/,/g, '') === dateNumStr && 
           String(dataValues[k][1]).trim() === String(item.categoryId).trim() && 
@@ -225,16 +225,14 @@ function executeSaveReport(formData) {
     }
 
     if (matchedIdx > 0) {
-      // 既存レコードの上書き
-      sheet.getRange(matchedIdx, 4).setValue(inputVal); // 計測値
-      sheet.getRange(matchedIdx, 13).setValue(userEmail); // 更新者
-      sheet.getRange(matchedIdx, 14).setValue(formattedNow); // 更新日時
+      sheet.getRange(matchedIdx, 4).setValue(inputVal); 
+      sheet.getRange(matchedIdx, 13).setValue(userEmail); 
+      sheet.getRange(matchedIdx, 14).setValue(formattedNow); 
     } else {
-      // 新規行の追加
       var yearStr = new Date(formData.date).getFullYear() + "年";
       var monthStr = yearStr + ("0" + (new Date(formData.date).getMonth() + 1)).slice(-2) + "月";
       sheet.appendRow([
-        lastRow + 1 + i, // ID (仮)
+        lastRow + 1 + i, 
         item.categoryId, 
         item.categoryName, 
         inputVal, 
@@ -248,7 +246,7 @@ function executeSaveReport(formData) {
         dateNumStr,
         userEmail,
         formattedNow,
-        formData.baseName + "_" + roomName + "_" + item.categoryId + "_" + dateNumStr // タイトル
+        formData.baseName + "_" + roomName + "_" + item.categoryId + "_" + dateNumStr 
       ]);
     }
   }
