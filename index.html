@@ -3,12 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-    <title>廃棄物報告 - v1.0.6</title>
-    <!-- ネットワーク接続の最適化 -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    
+    <title>廃棄物報告 - v1.0.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -164,65 +159,26 @@
             border-bottom-color: #e2e8f0;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-
-        /* 吹き出しツールチップ用スタイル */
-        .info-bubble {
-            position: absolute;
-            background: #1e293b;
-            color: white;
-            padding: 0.75rem;
-            border-radius: 0.75rem;
-            font-size: 0.75rem;
-            font-weight: 700;
-            line-height: 1.4;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-            /* z-indexを下げ、カレンダー(950)より下に配置 */
-            z-index: 50;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        /* 矢印は右側のiアイコンに合わせて右寄せ */
-        .info-bubble::after {
-            content: '';
-            position: absolute;
-            top: -5px;
-            right: 10px;
-            border-width: 0 6px 6px 6px;
-            border-style: solid;
-            border-color: transparent transparent #1e293b transparent;
-        }
-        .info-bubble.visible {
-            opacity: 1;
-        }
     </style>
 </head>
 <body id="app-body" class="bg-slate-50 min-h-screen">
 
-    <!-- 初期ローディング画面 -->
     <div id="loader" class="loading-overlay">
         <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
-        <span id="loader-text" class="text-slate-500 font-bold text-sm tracking-widest animate-pulse">読み込み中...</span>
+        <span class="text-slate-500 font-bold text-sm tracking-widest animate-pulse">読み込み中...</span>
     </div>
 
     <div id="slider-backdrop"></div>
 
     <!-- 数量パネル -->
     <div id="slider-panel" class="fixed bottom-0 left-0 right-0 p-6 pt-4 bg-white border-t border-slate-200 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[2.5rem]">
-        <div class="max-w-md mx-auto flex flex-col gap-5 relative">
-            
+        <div class="max-w-md mx-auto flex flex-col gap-5">
             <div class="flex flex-col gap-3">
                 <div class="flex justify-between items-start w-full px-1">
                     <div class="flex flex-col gap-1.5 flex-1 min-w-0 pr-2">
-                        <div class="relative flex items-baseline gap-2">
+                        <div class="flex items-baseline gap-2">
                             <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
-                            <i id="slider-info-trigger" class="fas fa-info-circle text-slate-400 text-sm cursor-pointer active:text-emerald-600 transition-colors" onclick="showSliderTooltip(event)"></i>
                             <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
-                            
-                            <!-- 計量パネル用吹き出し -->
-                            <div id="slider-info-bubble" class="info-bubble top-full left-0 mt-2 w-[200px]">
-                                <p id="slider-tooltip-text"></p>
-                            </div>
                         </div>
                         <div class="flex items-center gap-1.5 text-slate-500">
                             <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
@@ -300,7 +256,7 @@
                         <button id="btn-select-today" class="today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform">今日を選択</button>
                     </div>
 
-                    <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 whitespace-nowrap z-10 pointer-none">
+                    <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 whitespace-nowrap z-10 pointer-events-none">
                         <i class="fas fa-calendar-day text-slate-500 text-base"></i>
                         <div id="display-date" class="text-xl font-black text-[#1e293b]">---</div>
                     </div>
@@ -360,20 +316,19 @@
                         <i class="fas fa-info-circle text-slate-500 text-base mr-3"></i>
                         <h2 class="text-lg font-black text-[#1e293b]">アプリ説明</h2>
                     </div>
-                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.6</span>
+                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.5</span>
                 </div>
             </div>
             <div id="calendar-separator" class="hidden h-px bg-slate-200 w-full mt-1"></div>
         </div>
 
-        <main class="flex-1 px-4 relative z-10">
+        <main class="flex-1 px-4 relative">
             <div id="view-main" class="hidden flex flex-col pb-48">
                 <div id="scroll-area">
                     <div id="input-rows-container" class="touch-pan-y slide-container">
                         <div id="input-rows" class="grid grid-cols-2 gap-3 slide-content"></div>
                     </div>
                     
-                    <!-- 履歴リンクとアコーディオン -->
                     <div class="mt-8 mb-4 flex flex-col items-center">
                         <button id="btn-toggle-history" class="text-slate-400 font-bold text-sm flex items-center gap-2 py-2 px-4 rounded-full border border-slate-200 bg-white active:bg-slate-50 transition-colors shadow-sm" onclick="toggleHistory()">
                             <i id="history-icon" class="fas fa-chevron-down text-[10px]"></i>
@@ -498,7 +453,6 @@
         <span id="toast-text"></span>
     </div>
 
-    <!-- server-bridge: 本番のデータを埋め込む元の形式を維持します -->
     <div id="server-bridge" style="display:none;" data-payload="<?!= initialPayload ?>" data-email="<?= userEmail ?>"></div>
 
     <script>
@@ -506,7 +460,7 @@
             window.google = { script: { run: { 
                 withSuccessHandler: function(cb) { this._s = cb; return this; }, 
                 registerUserSetting: function() { setTimeout(() => { if(this._s) this._s({success:true}); }, 500); }, 
-                executeSaveReport: function() { setTimeout(() => { if(this._s) this._s({success:true, user: 'demo@example.com', time: '2026/03/11 20:00:00'}); }, 500); } 
+                executeSaveReport: function() { setTimeout(() => { if(this._s) this._s({success:true, user: 'demo@example.com', time: '2024/02/20 10:00:00'}); }, 500); } 
             } } }; 
         }
 
@@ -516,14 +470,19 @@
         var iconTimer = null; 
         var preSliderState = { input: 0, correction: 0 };
         var toastTimer = null;
-        var sliderTooltipTimer = null;
-        var cardTooltipTimers = {};
 
         window.onload = initApp;
 
-        // 日本時間のYYYY-MM-DDを取得するヘルパー関数
-        function getDsLocal(d) {
-            return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+        /**
+         * 拠点のフィルタリング判定用ヘルパー
+         * @param {Object} cat カテゴリ情報
+         * @param {String} base ユーザーが選択している拠点名
+         */
+        function isCategoryAllowed(cat, base) {
+            if (!cat.targetBase || cat.targetBase.trim() === "") return true; // 全拠点共通
+            if (!base) return false;
+            const targets = cat.targetBase.split(',').map(t => t.trim().toUpperCase());
+            return targets.includes(base.trim().toUpperCase());
         }
 
         function getDemoData() {
@@ -534,10 +493,13 @@
                     { id: "kp1", name: "プレス室1", dept: "製造部", base: "KP" }
                 ],
                 categories: [
-                    { id: "1", name: "普通ごみ", targetBase: "共通", detail: "事務所のゴミなど" },
-                    { id: "2", name: "廃プラスチック", targetBase: "HP", detail: "汚れていないプラスチックなど" }
+                    { id: "1", name: "普通ごみ", targetBase: "", detail: "事務所のゴミ、弁当の容器、生ごみなど" },
+                    { id: "2", name: "廃プラスチック", targetBase: "", detail: "汚れていないプラスチック、ビニール、PPバンドなど" },
+                    { id: "3", name: "金属くず", targetBase: "KP", detail: "プレス加工で発生した金属の端材、バリ、抜きカスなど" },
+                    { id: "4", name: "ダンボール", targetBase: "", detail: "梱包材、空箱、中敷きの紙など" },
+                    { id: "5", name: "ウエス", targetBase: "", detail: "油の付着した布、汚れ拭きに使用したタオルなど" }
                 ],
-                feedbackUrl: "",
+                feedbackUrl: "https://docs.google.com/forms/d/e/1FAIpQLSc2o-gFnK_IbLbFGZ86ryMLbY1A8hwJBkRYZ48dp4eO25CHMA/viewform?entry.176781763=%E5%BB%83%E6%A3%84%E7%89%A9%E5%A0%B1%E5%91%8A",
                 registeredData: {}, serverTime: Date.now()
             };
         }
@@ -549,9 +511,7 @@
                 var userEmail = bridge.getAttribute('data-email');
                 if (!userEmail || userEmail.indexOf('<' + '?') === 0) userEmail = "demo@mipox.co.jp";
                 var decoded;
-                
-                // GASからの埋め込みデータが空でないか確認
-                if (!rawPayload || rawPayload.indexOf('<' + '?') === 0 || rawPayload === "undefined" || rawPayload === "") { 
+                if (!rawPayload || rawPayload.indexOf('<' + '?') === 0 || rawPayload === "undefined") { 
                     decoded = getDemoData(); 
                 } else {
                     try {
@@ -559,16 +519,12 @@
                         var bytes = new Uint8Array(binary.length); 
                         for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
                         decoded = JSON.parse(new TextDecoder().decode(bytes));
-                    } catch(e) { 
-                        decoded = getDemoData(); 
-                    }
+                    } catch(e) { decoded = getDemoData(); }
                 }
-
                 Object.assign(state, decoded); 
                 state.serverTime = decoded.serverTime || Date.now(); 
                 calendarViewDate = new Date(state.serverTime);
                 setToday(false);
-
                 if (state.userExists && state.userSetting?.roomId) {
                     state.isRegLocked = true;
                     initRoomNavigation();
@@ -576,15 +532,15 @@
                 } else {
                     state.isRegLocked = false;
                     showRegistrationView();
-                    if (state.locations && state.locations.length > 2) {
-                        showToast("初期設定を行ってください", "info");
-                    }
+                    showToast("初期設定を行ってください", "info");
                 }
                 document.getElementById('display-user-email').innerText = userEmail;
                 document.getElementById('global-user-avatar').src = "https://ui-avatars.com/api/?background=2563eb&color=fff&bold=true&name=" + encodeURIComponent(userEmail);
                 
-                document.getElementById('loader').style.display = 'none'; 
-                document.getElementById('app-content').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('loader').style.display = 'none'; 
+                    document.getElementById('app-content').classList.remove('hidden');
+                }, 100);
 
                 initEventListeners();
                 initSwipeSupport();
@@ -862,18 +818,6 @@
             var room = state.locations.find(l => String(l.id).trim() === curRoomId);
             document.getElementById('slider-location-name').innerText = room ? room.name : "---";
             
-            var bubble = document.getElementById('slider-info-bubble');
-            bubble.classList.remove('visible');
-
-            var cat = state.categories.find(c => String(c.id) === String(id));
-            var infoIcon = document.getElementById('slider-info-trigger');
-            if (cat && cat.detail) {
-                document.getElementById('slider-tooltip-text').innerText = cat.detail;
-                infoIcon.style.display = 'inline-block';
-            } else {
-                infoIcon.style.display = 'none';
-            }
-
             if (correctionValues[id] === undefined) correctionValues[id] = regVal;
             document.getElementById('registered-val-field').value = correctionValues[id].toFixed(1);
             var curInput = inputValues[id] || 0;
@@ -944,6 +888,7 @@
                 correctionValues[activeSliderCatId] = preSliderState.correction;
                 saveCurrentToCache();
                 renderCategoryCards();
+                updateFooterVisibility(); // 報告内容の状態に合わせてボタンの表示・非表示を更新
             }
             closeSlider();
         }
@@ -1006,8 +951,7 @@
             if (Object.keys(state.pendingChanges).length === 0) return;
             state.pendingChanges = {}; inputValues = {}; correctionValues = {};
             renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
-            var el = document.getElementById('calendar-expansion');
-            if (!el.classList.contains('open')) toggleCalendar(true);
+            // カレンダーを強制的に開かないように変更（日付選択状態を維持）
             showToast("入力をクリアしました", "info");
         }
 
@@ -1093,12 +1037,12 @@
         function setToday(c = true) { 
             var n = new Date(state.serverTime); 
             calendarViewDate = new Date(n); 
-            selectDateFromCal(getDsLocal(n), false); 
+            selectDateFromCal(n.toISOString().split('T')[0], false); 
         }
 
         function updateTodayButtonState() {
             var btn = document.getElementById('btn-select-today');
-            var todayStr = getDsLocal(new Date(state.serverTime));
+            var todayStr = new Date(state.serverTime).toISOString().split('T')[0];
             var isSelected = state.selectedDate === todayStr;
 
             if (isSelected) {
@@ -1128,7 +1072,9 @@
             document.getElementById('calendar-title').innerText = y + "年 " + (m + 1) + "月";
             grid.innerHTML = "";
             var firstDate = new Date(y, m, 1), lastDate = new Date(y, m + 1, 0), firstDayIndex = firstDate.getDay(), prevMonthLastDate = new Date(y, m, 0).getDate();
-            var todayStr = getDsLocal(new Date(state.serverTime)), curRoomId = String(state.userSetting?.roomId || "").trim();
+            var todayStr = new Date(state.serverTime).toISOString().split('T')[0], curRoomId = String(state.userSetting?.roomId || "").trim();
+            var myB = state.userSetting?.base;
+
             for (var i = firstDayIndex - 1; i >= 0; i--) grid.innerHTML += '<div class="aspect-square flex items-center justify-center text-slate-400 text-[10px] font-bold">' + (prevMonthLastDate - i) + '</div>';
             for (var d = 1; d <= lastDate.getDate(); d++) {
                 var ds = y + "-" + ("0" + (m + 1)).slice(-2) + "-" + ("0" + d).slice(-2);
@@ -1138,10 +1084,12 @@
                 var valHtml = '<div class="flex flex-col items-center">';
                 if (pending) {
                     var origTotal = reg ? reg.total : 0;
-                    var pendingTotal = state.categories.reduce((acc, c) => {
-                        var c_orig = (reg && reg.cats) ? reg.cats[c.id] || 0 : 0;
-                        return acc + ((pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : c_orig) + (pending.inputs[c.id] || 0));
-                    }, 0);
+                    var pendingTotal = state.categories
+                        .filter(c => isCategoryAllowed(c, myB))
+                        .reduce((acc, c) => {
+                            var c_orig = (reg && reg.cats) ? reg.cats[c.id] || 0 : 0;
+                            return acc + ((pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : c_orig) + (pending.inputs[c.id] || 0));
+                        }, 0);
                     var diff = pendingTotal - origTotal;
                     if (Math.abs(diff) >= 0.01) {
                         var sign = diff > 0 ? "+" : "";
@@ -1158,26 +1106,6 @@
             for (var d = 1; d <= 6 - lastDate.getDay(); d++) grid.innerHTML += '<div class="aspect-square flex items-center justify-center text-slate-400 text-[10px] font-bold">' + d + '</div>';
         }
 
-        function showTooltip(e, id) {
-            e.stopPropagation();
-            var el = document.getElementById('tooltip-card-' + id);
-            if (!el) return;
-            document.querySelectorAll('[id^="tooltip-card-"]').forEach(tip => tip.classList.remove('visible'));
-            el.classList.add('visible');
-            if (cardTooltipTimers[id]) clearTimeout(cardTooltipTimers[id]);
-            cardTooltipTimers[id] = setTimeout(() => { el.classList.remove('visible'); }, 2000);
-        }
-
-        function showSliderTooltip(e) {
-            e.stopPropagation();
-            var el = document.getElementById('slider-info-bubble');
-            el.classList.toggle('visible');
-            if (sliderTooltipTimer) clearTimeout(sliderTooltipTimer);
-            if (el.classList.contains('visible')) {
-                sliderTooltipTimer = setTimeout(() => { el.classList.remove('visible'); }, 2000);
-            }
-        }
-
         function renderCategoryCards() {
             var cont = document.getElementById('input-rows'), myB = state.userSetting?.base, curRoomId = String(state.userSetting?.roomId || "").trim();
             var room = state.locations.find(l => String(l.id).trim() === curRoomId);
@@ -1187,36 +1115,36 @@
             var reg = state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {};
             var pending = state.pendingChanges[state.selectedDate];
             
-            cont.innerHTML = state.categories.filter(c => {
-                // 拠点別カテゴリフィルタリングの厳密化
-                var target = String(c.targetBase || "").trim();
-                var userBase = String(myB || "").trim();
-                // 厳密ルール: 「共通」というキーワード、または現在の拠点名と一致する場合のみ表示
-                return target === "共通" || target === userBase;
-            }).map(c => {
+            cont.innerHTML = state.categories.filter(c => isCategoryAllowed(c, myB)).map(c => {
                 var origVal = reg[c.id] || 0, baseVal = correctionValues[c.id] !== undefined ? correctionValues[c.id] : origVal, newVal = inputValues[c.id] || 0;
                 var displayVal = baseVal + newVal;
                 var diff = displayVal - origVal;
                 var isPending = Math.abs(diff) >= 0.01;
                 var cardBorder = isPending ? "border-2 border-orange-500 bg-orange-50/20" : (displayVal > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border border-slate-200 bg-white");
+                
                 var notationHtml = '';
                 if (isPending) {
                     var sign = diff > 0 ? "+" : "";
                     var color = diff > 0 ? "text-orange-500" : "text-blue-500";
                     notationHtml = `<div style="padding-right: 1.5rem;" class="text-sm font-black ${color} leading-none mb-1">${sign}${diff.toFixed(1)}</div>`;
                 }
-                var infoIconHtml = c.detail ? `
-                    <div id="tooltip-card-${c.id}" class="info-bubble top-8 left-2 right-2">
-                        ${c.detail}
+
+                var tooltipHtml = c.detail ? `
+                    <div class="relative group inline-block" onclick="event.stopPropagation()">
+                        <i class="fas fa-info-circle text-slate-400 text-sm pl-1.5 py-0.5 cursor-help"></i>
+                        <div class="absolute top-full right-0 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] w-[180px] p-2.5 bg-slate-800 text-white text-[11px] leading-relaxed rounded-lg shadow-xl pointer-events-none whitespace-normal text-left break-words font-medium tracking-wide">
+                            ${c.detail}
+                            <div class="absolute bottom-full right-2 border-[6px] border-transparent border-b-slate-800"></div>
+                        </div>
                     </div>
-                    <i class="fas fa-info-circle absolute top-2.5 right-2.5 text-slate-300 text-[14px] cursor-pointer active:text-emerald-600 transition-colors z-[20]" onclick="showTooltip(event, '${c.id}')"></i>
                 ` : '';
+
                 return `
-                    <div id="cat-card-${c.id}" class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all ${cardBorder}" onclick="openSlider('${c.id}', '${c.name}')">
-                        ${infoIconHtml}
+                    <div id="cat-card-${c.id}" class="app-card p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all ${cardBorder}" onclick="openSlider('${c.id}', '${c.name}')">
                         <div>
                             <div class="flex items-start justify-between gap-1">
-                                <div class="text-base font-bold truncate text-[#1e293b] pr-6">${c.name}</div>
+                                <div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1">${c.name}</div>
+                                ${tooltipHtml}
                             </div>
                             <div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div>
                         </div>
@@ -1238,26 +1166,53 @@
             var btn = document.getElementById('btn-save-report'); 
             btn.disabled = true; 
             var curRoomId = String(state.userSetting?.roomId || "").trim();
-            for (var i = 0; i < datesToSubmit.length; i++) {
-                var ds = datesToSubmit[i];
+            var myB = state.userSetting?.base;
+            
+            var totalItemsCount = 0;
+            datesToSubmit.forEach(ds => {
                 var pending = state.pendingChanges[ds], reg = state.registeredData[ds]?.[curRoomId]?.cats || {};
-                var items = state.categories.map(c => {
-                    var orig = reg[c.id] || 0, val = (pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : orig) + (pending.inputs[c.id] || 0);
-                    return (Math.abs(val - orig) >= 0.01) ? { categoryId: c.id, categoryName: c.name, value: val.toFixed(1) } : null;
-                }).filter(x => x !== null);
+                var changedItems = state.categories
+                    .filter(c => isCategoryAllowed(c, myB))
+                    .filter(c => {
+                        var orig = reg[c.id] || 0;
+                        var val = (pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : orig) + (pending.inputs[c.id] || 0);
+                        return Math.abs(val - orig) >= 0.01;
+                    });
+                totalItemsCount += changedItems.length;
+            });
+
+            var processedItemsCount = 0;
+            for (var idx = 0; idx < datesToSubmit.length; idx++) {
+                var ds = datesToSubmit[idx];
+                var pending = state.pendingChanges[ds], reg = state.registeredData[ds]?.[curRoomId]?.cats || {};
+                
+                var items = state.categories
+                    .filter(c => isCategoryAllowed(c, myB))
+                    .map(c => {
+                        var orig = reg[c.id] || 0, val = (pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : orig) + (pending.inputs[c.id] || 0);
+                        return (Math.abs(val - orig) >= 0.01) ? { categoryId: c.id, categoryName: c.name, value: val.toFixed(1) } : null;
+                    }).filter(x => x !== null);
+
                 if (items.length > 0) {
+                    processedItemsCount += items.length;
+                    btn.innerHTML = `<i class="fas fa-circle-notch animate-spin mr-2"></i><span>報告中... (廃棄物 ${processedItemsCount}/${totalItemsCount})</span>`;
                     await new Promise(resolve => {
                         google.script.run.withSuccessHandler((res) => {
                             if (!state.registeredData[ds]) state.registeredData[ds] = {};
                             if (!state.registeredData[ds][curRoomId]) state.registeredData[ds][curRoomId] = { total: 0, cats: {}, logs: [] };
+                            
                             items.forEach(it => { 
                                 state.registeredData[ds][curRoomId].cats[it.categoryId] = parseFloat(it.value); 
                                 state.registeredData[ds][curRoomId].logs = state.registeredData[ds][curRoomId].logs.filter(l => l.catId !== it.categoryId);
                                 state.registeredData[ds][curRoomId].logs.push({
-                                    catId: it.categoryId, catName: it.categoryName, val: parseFloat(it.value),
-                                    user: res.user || '自分', time: res.time || '今'
+                                    catId: it.categoryId,
+                                    catName: it.categoryName,
+                                    val: parseFloat(it.value),
+                                    user: res.user || '自分',
+                                    time: res.time || '今'
                                 });
                             });
+                            
                             state.registeredData[ds][curRoomId].total = Object.values(state.registeredData[ds][curRoomId].cats).reduce((a, b) => a + b, 0);
                             if (ds === state.selectedDate) { inputValues = {}; correctionValues = {}; }
                             delete state.pendingChanges[ds]; resolve();
@@ -1266,7 +1221,8 @@
                 } else delete state.pendingChanges[ds];
             }
             showToast("報告が完了しました"); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
-            btn.disabled = false;
+            if (!document.getElementById('calendar-expansion').classList.contains('open')) toggleCalendar(true);
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane text-blue-200"></i><span>報告する</span>';
         }
 
         function initSwipeSupport() {
