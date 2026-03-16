@@ -246,14 +246,16 @@
                 <h1 class="text-2xl font-black text-[#1e293b] tracking-tight leading-tight whitespace-nowrap">廃棄物報告</h1>
             </div>
 
-            <div id="header-status-bar" class="flex-1 flex flex-col items-end pr-1 min-w-[80px]" style="display: none;">
-                <span id="badge-base" class="text-[15px] font-black bg-slate-900 text-white px-2 py-0.5 rounded uppercase tracking-widest leading-none mb-1.5 shadow-sm">---</span>
-                <span id="display-dept-short" class="text-[15px] font-bold text-slate-500 truncate w-full leading-none text-right">読込中</span>
+            <!-- 拠点バッジと所属テキストのコンテナ: py-1で要素を少し内側に寄せる -->
+            <div id="header-status-bar" class="flex-1 h-12 flex flex-col justify-between items-end pr-1 min-w-[80px] py-1" style="display: none;">
+                <!-- w-9(36px)に縮小し、tracking-wideで文字間を詰め、2文字に最適化 -->
+                <span id="badge-base" class="w-9 text-center text-[13px] font-black bg-emerald-600 text-white py-1 rounded uppercase tracking-wide leading-none shadow-sm">---</span>
+                <span id="display-dept-short" class="text-[14px] font-bold text-slate-500 truncate w-full leading-none text-right">読込中</span>
             </div>
 
             <div class="flex items-center gap-4 flex-shrink-0">
-                <div class="w-11 h-11 flex items-center justify-center">
-                    <button id="btn-avatar" class="w-11 h-11 rounded-full bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 active:ring-2 active:ring-blue-600 transition-all">
+                <div class="w-12 h-12 flex items-center justify-center">
+                    <button id="btn-avatar" class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 active:ring-2 active:ring-blue-600 transition-all">
                         <img id="global-user-avatar" src="" class="w-full h-full object-cover">
                     </button>
                 </div>
@@ -366,8 +368,8 @@
                         <div class="relative flex items-center justify-center mb-4 min-h-[28px]">
                             <span id="lock-badge" class="absolute left-0 px-2 py-1 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent">LOCKED</span>
                             <span class="relative flex items-center">
-                                <i class="fas fa-map-marker-alt text-emerald-600 absolute right-[calc(100%+8px)]"></i>
-                                <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap">01. 拠点</label>
+                                <i class="fas fa-map-marker-alt text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
+                                <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">01. 拠点</label>
                             </span>
                         </div>
                         <div class="grid grid-cols-3 gap-2">
@@ -381,8 +383,8 @@
                         <div class="app-card p-4 border-2 border-slate-200">
                             <div class="flex justify-center items-center mb-4">
                                 <span class="relative flex items-center">
-                                    <i class="fas fa-building text-emerald-600 absolute right-[calc(100%+8px)]"></i>
-                                    <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none pt-0.5">02. 所属/建屋</label>
+                                    <i class="fas fa-building text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
+                                    <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">02. 所属/建屋</label>
                                 </span>
                             </div>
                             <select id="reg-dept-select" onchange="onRegDeptChange()" disabled class="w-full h-12 px-2 rounded-lg bg-slate-50 border border-slate-200 font-bold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"></select>
@@ -390,8 +392,8 @@
                         <div class="app-card p-4 border-2 border-slate-200">
                             <div class="flex justify-center items-center mb-4">
                                 <span class="relative flex items-center">
-                                    <i class="fas fa-door-open text-emerald-600 absolute right-[calc(100%+8px)]"></i>
-                                    <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none pt-0.5">03. 場所</label>
+                                    <i class="fas fa-door-open text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
+                                    <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">03. 場所</label>
                                 </span>
                             </div>
                             <select id="reg-room-select" onchange="onRegRoomChange()" disabled class="w-full h-12 px-2 rounded-lg bg-slate-50 border border-slate-200 font-bold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"></select>
@@ -527,15 +529,76 @@
             return {
                 userExists: false,
                 locations: [
-                    { id: "1", name: "CR1", dept: "製造1", base: "HP" },
-                    { id: "kp1", name: "プレス室1", dept: "製造部", base: "KP" }
+                    // HP
+                    { id: "1", name: "CR1", dept: "B01", base: "HP" },
+                    { id: "1-2", name: "CR2", dept: "B01", base: "HP" },
+                    { id: "3", name: "スリット", dept: "B01", base: "HP" },
+                    { id: "1-4", name: "B01-待機室", dept: "B01", base: "HP" },
+                    { id: "1-5", name: "B01-材料置場", dept: "B01", base: "HP" },
+                    { id: "2", name: "検査室", dept: "B04", base: "HP" },
+                    { id: "6", name: "AtsumaruとManabu", dept: "B04", base: "HP" },
+                    { id: "7", name: "Mirai", dept: "B04", base: "HP" },
+                    { id: "8", name: "MigakuとHakaru", dept: "B04", base: "HP" },
+                    { id: "4-5", name: "B04-技術待機所", dept: "B04", base: "HP" },
+                    { id: "9", name: "G-Line", dept: "B05", base: "HP" },
+                    { id: "10", name: "Y6とN8", dept: "B05", base: "HP" },
+                    { id: "5-3", name: "B05-測定室", dept: "B05", base: "HP" },
+                    { id: "5-4", name: "B05-洗浄場", dept: "B05", base: "HP" },
+                    { id: "5-5", name: "B05-サンプル庫", dept: "B05", base: "HP" },
+                    // KP
+                    { id: "28", name: "事務所", dept: "11B", base: "KP" },
+                    { id: "kp-1-2", name: "プレス1号機", dept: "11B", base: "KP" },
+                    { id: "kp-1-3", name: "プレス2号機", dept: "11B", base: "KP" },
+                    { id: "kp-1-4", name: "切断エリア", dept: "11B", base: "KP" },
+                    { id: "kp-1-5", name: "11B-物流バース", dept: "11B", base: "KP" },
+                    { id: "kp-2-1", name: "次世代CTPJ", dept: "18号館", base: "KP" },
+                    { id: "kp-2-2", name: "試作開発室", dept: "18号館", base: "KP" },
+                    { id: "kp-2-3", name: "組立室", dept: "18号館", base: "KP" },
+                    { id: "kp-2-4", name: "検査場", dept: "18号館", base: "KP" },
+                    { id: "kp-2-5", name: "18号館スリット室", dept: "18号館", base: "KP" },
+                    { id: "kp-3-1", name: "GIセンター", dept: "物流課", base: "KP" },
+                    { id: "kp-3-2", name: "出荷バース", dept: "物流課", base: "KP" },
+                    { id: "kp-3-3", name: "入荷バース", dept: "物流課", base: "KP" },
+                    { id: "kp-3-4", name: "梱包エリアA", dept: "物流課", base: "KP" },
+                    { id: "kp-3-5", name: "梱包エリアB", dept: "物流課", base: "KP" },
+                    // FP
+                    { id: "13", name: "防水エリア", dept: "製造一課", base: "FP" },
+                    { id: "14", name: "調合エリア", dept: "製造一課", base: "FP" },
+                    { id: "fp-1-3", name: "一課-洗浄室", dept: "製造一課", base: "FP" },
+                    { id: "fp-1-4", name: "一課-充填機", dept: "製造一課", base: "FP" },
+                    { id: "fp-1-5", name: "一課-材料置場", dept: "製造一課", base: "FP" },
+                    { id: "17", name: "電着C", dept: "製造三課", base: "FP" },
+                    { id: "18", name: "電着D", dept: "製造三課", base: "FP" },
+                    { id: "19", name: "ユニベックス", dept: "製造三課", base: "FP" },
+                    { id: "fp-3-4", name: "三課-研磨室", dept: "製造三課", base: "FP" },
+                    { id: "fp-3-5", name: "三課-廃液室", dept: "製造三課", base: "FP" },
+                    { id: "23", name: "尺取", dept: "製造五課", base: "FP" },
+                    { id: "24", name: "旋盤", dept: "製造五課", base: "FP" },
+                    { id: "25", name: "発泡エリア", dept: "製造五課", base: "FP" },
+                    { id: "26", name: "NPライン", dept: "製造五課", base: "FP" },
+                    { id: "27", name: "ダイヤライン", dept: "製造五課", base: "FP" }
                 ],
                 categories: [
-                    { id: "1", name: "普通ごみ", targetBase: "", detail: "事務所のゴミ、弁当の容器、生ごみなど" },
-                    { id: "2", name: "廃プラスチック", targetBase: "", detail: "汚れていないプラスチック、ビニール、PPバンドなど" },
-                    { id: "3", name: "金属くず", targetBase: "KP", detail: "プレス加工で発生した金属の端材、バリ、抜きカスなど" },
-                    { id: "4", name: "ダンボール", targetBase: "", detail: "梱包材、空箱、中敷きの紙など" },
-                    { id: "5", name: "ウエス", targetBase: "", detail: "油の付着した布、汚れ拭きに使用したタオルなど" }
+                    // HP 用 (ID 1-12)
+                    { id: "1", name: "普通ごみ", targetBase: "HP", detail: "一般ごみ" },
+                    { id: "2", name: "木くず", targetBase: "HP", detail: "木屑（パレット）" },
+                    { id: "3", name: "再生フィルム", targetBase: "HP", detail: "再生フィルムA" },
+                    { id: "4", name: "紙屑", targetBase: "HP", detail: "コピー紙、雑誌、カタログ" },
+                    { id: "5", name: "ダンボール", targetBase: "HP", detail: "梱包資材" },
+                    { id: "6", name: "金属屑", targetBase: "HP", detail: "鉄屑、アルミ缶、ドラム缶" },
+                    { id: "7", name: "ガラス屑", targetBase: "HP", detail: "蛍光灯、陶磁器類" },
+                    { id: "11", name: "有機溶剤廃液", targetBase: "HP", detail: "有機系洗浄液" },
+                    // FP 用 (ID 13-17)
+                    { id: "13", name: "廃液", targetBase: "FP", detail: "製造廃液" },
+                    { id: "14", name: "固形燃料", targetBase: "FP", detail: "一般ゴミ由来の固形燃料" },
+                    { id: "15", name: "製品廃材", targetBase: "FP", detail: "製品端材" },
+                    { id: "16", name: "研磨材", targetBase: "FP", detail: "廃棄砂" },
+                    { id: "17", name: "一斗缶", targetBase: "FP", detail: "空の一斗缶" },
+                    // KP 用 (ID 18-21)
+                    { id: "18", name: "可燃ごみ", targetBase: "KP", detail: "可燃ごみ全般" },
+                    { id: "19", name: "木くず", targetBase: "KP", detail: "木屑（パレット含む）" },
+                    { id: "20", name: "紙屑", targetBase: "KP", detail: "段ボール、書籍" },
+                    { id: "21", name: "廃プラスチック", targetBase: "KP", detail: "梱包フィルム、PPバンド" }
                 ],
                 feedbackUrl: "https://docs.google.com/forms/d/e/1FAIpQLSc2o-gFnK_IbLbFGZ86ryMLbY1A8hwJBkRYZ48dp4eO25CHMA/viewform?entry.176781763=%E5%BB%83%E6%A3%84%E7%89%A9%E5%A0%B1%E5%91%8A",
                 registeredData: {}, serverTime: Date.now()
