@@ -18,7 +18,6 @@
             -webkit-tap-highlight-color: transparent; 
         }
         
-        /* 背面スクロールロック用クラス */
         .lock-scroll { overflow: hidden !important; height: 100vh !important; }
 
         .loading-overlay { background: #ffffff; z-index: 9000; position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
@@ -93,7 +92,8 @@
         .val-input:focus { border-bottom-color: #0f172a; }
         .val-input:disabled { color: #94a3b8; border-bottom-style: dashed; opacity: 0.6; background-color: transparent !important; }
 
-        .calendar-val { font-size: 9px; line-height: 1; font-weight: 900; color: #059669; margin-top: 1px; }
+        /* カレンダー数値のスタイル: 垂直整列を考慮しマージンをリセット */
+        .calendar-val { font-size: 9px; line-height: 1; font-weight: 900; color: #1e293b; margin-top: 1px; }
         .calendar-val-pending { font-size: 9px; line-height: 1; font-weight: 900; margin-top: 1px; }
         .text-pending-plus { color: #f59e0b; }
         .text-pending-minus { color: #2563eb; }
@@ -173,25 +173,19 @@
 
     <div id="slider-backdrop"></div>
 
-    <!-- 数量パネル -->
     <div id="slider-panel" class="fixed bottom-0 left-0 right-0 p-6 pt-4 bg-white border-t border-slate-200 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[2.5rem]">
         <div class="max-w-md mx-auto flex flex-col gap-5">
             <div class="flex flex-col gap-3">
                 <div class="relative w-full px-1">
-                    <!-- ×ボタンの位置を上に、サイズを微調整 -->
                     <button id="btn-close-slider" class="absolute -top-1 -right-1 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-transform z-10">
                         <i class="fas fa-times text-lg"></i>
                     </button>
-                    
                     <div class="flex flex-col gap-1.5 w-full">
-                        <div class="flex items-center gap-2 flex-wrap pr-10"> <!-- ボタンと重ならないよう右に余白 -->
+                        <div class="flex items-center gap-2 flex-wrap pr-10">
                             <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
                             <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
                         </div>
-                        
-                        <!-- 詳細テキストエリア: 余白を広げ、横幅をボタン下まで拡張。縦幅を微減 -->
                         <div id="slider-cat-detail" class="hidden mt-4 w-full py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] leading-relaxed shadow-inner"></div>
-
                         <div class="flex items-center gap-1.5 text-slate-500 mt-1">
                             <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
                             <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
@@ -206,7 +200,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="flex flex-col items-center py-2">
                 <div class="flex items-end gap-3">
                     <div class="flex flex-col items-center">
@@ -221,18 +214,15 @@
                     <span class="text-lg font-bold text-slate-500 mb-3">Kg</span>
                 </div>
             </div>
-
             <div class="grid grid-cols-4 gap-2">
                 <button data-val="5" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+5</button>
                 <button data-val="10" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+10</button>
                 <button data-val="15" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+15</button>
                 <button data-val="20" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+20</button>
             </div>
-            
             <div class="px-1 py-1.5">
                 <input type="range" id="input-slider" min="0" max="100" step="0.1" value="0" oninput="onSliderInput(this.value)">
             </div>
-            
             <button id="btn-confirm-slider" class="btn-action font-bold" disabled onclick="closeSlider()">計量</button>
         </div>
     </div>
@@ -245,14 +235,10 @@
                 </div>
                 <h1 class="text-2xl font-black text-[#1e293b] tracking-tight leading-tight whitespace-nowrap">廃棄物報告</h1>
             </div>
-
-            <!-- 拠点バッジと所属テキストのコンテナ: py-1で要素を少し内側に寄せる -->
             <div id="header-status-bar" class="flex-1 h-12 flex flex-col justify-between items-end pr-1 min-w-[80px] py-1" style="display: none;">
-                <!-- w-9(36px)に縮小し、tracking-wideで文字間を詰め、2文字に最適化 -->
                 <span id="badge-base" class="w-9 text-center text-[13px] font-black bg-emerald-600 text-white py-1 rounded uppercase tracking-wide leading-none shadow-sm">---</span>
                 <span id="display-dept-short" class="text-[14px] font-bold text-slate-500 truncate w-full leading-none text-right">読込中</span>
             </div>
-
             <div class="flex items-center gap-4 flex-shrink-0">
                 <div class="w-12 h-12 flex items-center justify-center">
                     <button id="btn-avatar" class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 active:ring-2 active:ring-blue-600 transition-all">
@@ -268,12 +254,10 @@
                     <div class="absolute left-4 z-30">
                         <button id="btn-select-today" class="today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform">今日を選択</button>
                     </div>
-
                     <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 whitespace-nowrap z-10 pointer-events-none">
                         <i class="fas fa-calendar-day text-slate-500 text-base"></i>
                         <div id="display-date" class="text-xl font-black text-[#1e293b]">---</div>
                     </div>
-
                     <div id="calendar-toggle-group" class="group flex-1 h-full flex items-center justify-end px-4 cursor-pointer active:bg-slate-200/50 transition-all z-20">
                         <div class="w-8 h-8 flex items-center justify-center">
                             <div id="cal-toggle-icon-container" class="flex items-center justify-center w-8 h-8 bg-emerald-50 rounded-lg text-emerald-900 group-active:bg-emerald-600 group-active:text-white transition-all shadow-sm">
@@ -282,10 +266,9 @@
                         </div>
                     </div>
                 </div>
-
-                <div id="calendar-expansion" class="bg-white rounded-b-2xl px-1 pt-2 pb-0 open touch-pan-y slide-container">
+                <div id="calendar-expansion" class="bg-white rounded-b-2xl px-1 pt-1 pb-0 open touch-pan-y slide-container">
                     <div id="calendar-slide-wrapper" class="slide-content">
-                        <div class="grid grid-cols-7 mb-2 mt-0.5 items-center">
+                        <div class="grid grid-cols-7 mb-1 mt-0 items-center">
                             <div class="flex justify-center">
                                 <button id="btn-prev-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-left text-xs"></i></button>
                             </div>
@@ -305,13 +288,12 @@
             <div id="view-main-sticky" class="hidden">
                 <div id="room-nav-label" class="px-1 flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <div class="w-1.5 h-4 bg-emerald-600 rounded-full"></div>
                         <div class="flex items-center gap-2">
-                            <i class="fas fa-door-open text-xs text-emerald-600"></i>
+                            <i class="fas fa-door-open text-base text-emerald-600"></i>
                             <span id="current-room-display-name" class="text-lg font-black text-[#1e293b]">場所：---</span>
                         </div>
                     </div>
-                    <div id="room-dots-container" class="flex gap-1"></div>
+                    <div id="room-dots-container" class="flex items-center gap-1.5"></div>
                 </div>
             </div>
             
@@ -341,17 +323,14 @@
                     <div id="input-rows-container" class="touch-pan-y slide-container">
                         <div id="input-rows" class="grid grid-cols-2 gap-3 slide-content"></div>
                     </div>
-                    
                     <div class="mt-8 mb-4 flex flex-col items-center">
                         <button id="btn-toggle-history" class="text-slate-400 font-bold text-sm flex items-center gap-2 py-2 px-4 rounded-full border border-slate-200 bg-white active:bg-slate-50 transition-colors shadow-sm" onclick="toggleHistory()">
                             <i id="history-icon" class="fas fa-chevron-down text-[10px]"></i>
                             <span>履歴を表示する</span>
                         </button>
-                        
                         <div id="history-expansion" class="w-full">
                             <div class="app-card p-4 border-2 border-slate-200 bg-slate-50/50">
-                                <div id="history-list" class="space-y-4">
-                                </div>
+                                <div id="history-list" class="space-y-4"></div>
                             </div>
                         </div>
                     </div>
@@ -378,7 +357,6 @@
                             <button id="base-FP" onclick="regSelectBase('FP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>FP</span></button>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-2 gap-3">
                         <div class="app-card p-4 border-2 border-slate-200">
                             <div class="flex justify-center items-center mb-4">
@@ -419,7 +397,7 @@
                         <div class="flex items-start gap-4 p-2">
                             <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">1</div>
                             <div class="flex-1 pt-1">
-                                <p class="font-bold text-slate-800 leading-none mb-1 text-sm">日付を選択</p>
+                                <p class="font-bold text-slate-800弘 leading-none mb-1 text-sm">日付を選択</p>
                                 <p class="text-[11px] text-slate-500 text-justify">カレンダーの日付をタップすると閉じ、計量を開始できます。カレンダー部分は左右のフリックで月移動が可能です。</p>
                             </div>
                         </div>
@@ -460,7 +438,6 @@
         </footer>
     </div>
 
-    <!-- トースト通知 -->
     <div id="toast" onclick="hideToast()">
         <i id="toast-icon"></i>
         <span id="toast-text"></span>
@@ -483,127 +460,9 @@
         var iconTimer = null; 
         var preSliderState = { input: 0, correction: 0 };
         var toastTimer = null;
-        var tooltipTimers = {}; // 吹き出し用のタイマー管理
+        var tooltipTimers = {};
 
         window.onload = initApp;
-
-        /**
-         * 拠点のフィルタリング判定用ヘルパー
-         */
-        function isCategoryAllowed(cat, base) {
-            if (!cat.targetBase || cat.targetBase.trim() === "") return true; 
-            if (!base) return false;
-            const targets = cat.targetBase.split(',').map(t => t.trim().toUpperCase());
-            return targets.includes(base.trim().toUpperCase());
-        }
-
-        /**
-         * 吹き出し（詳細オーバーレイ）を表示し、3秒後に自動で非表示にする
-         */
-        function showTooltip(id, e) {
-            if (e) e.stopPropagation();
-            const el = document.getElementById(`tooltip-${id}`);
-            if (!el) return;
-            
-            // 他の吹き出しを全て隠す
-            document.querySelectorAll('[id^="tooltip-"]').forEach(t => {
-                if (t.id !== `tooltip-${id}`) {
-                    t.classList.add('invisible', 'opacity-0');
-                    t.classList.remove('visible', 'opacity-100');
-                }
-            });
-
-            // 対象の吹き出しを表示
-            el.classList.remove('invisible', 'opacity-0');
-            el.classList.add('visible', 'opacity-100');
-
-            // 3秒タイマー設定
-            if (tooltipTimers[id]) clearTimeout(tooltipTimers[id]);
-            tooltipTimers[id] = setTimeout(() => {
-                el.classList.add('invisible', 'opacity-0');
-                el.classList.remove('visible', 'opacity-100');
-            }, 3000);
-        }
-
-        function getDemoData() {
-            return {
-                userExists: false,
-                locations: [
-                    // HP
-                    { id: "1", name: "CR1", dept: "B01", base: "HP" },
-                    { id: "1-2", name: "CR2", dept: "B01", base: "HP" },
-                    { id: "3", name: "スリット", dept: "B01", base: "HP" },
-                    { id: "1-4", name: "B01-待機室", dept: "B01", base: "HP" },
-                    { id: "1-5", name: "B01-材料置場", dept: "B01", base: "HP" },
-                    { id: "2", name: "検査室", dept: "B04", base: "HP" },
-                    { id: "6", name: "AtsumaruとManabu", dept: "B04", base: "HP" },
-                    { id: "7", name: "Mirai", dept: "B04", base: "HP" },
-                    { id: "8", name: "MigakuとHakaru", dept: "B04", base: "HP" },
-                    { id: "4-5", name: "B04-技術待機所", dept: "B04", base: "HP" },
-                    { id: "9", name: "G-Line", dept: "B05", base: "HP" },
-                    { id: "10", name: "Y6とN8", dept: "B05", base: "HP" },
-                    { id: "5-3", name: "B05-測定室", dept: "B05", base: "HP" },
-                    { id: "5-4", name: "B05-洗浄場", dept: "B05", base: "HP" },
-                    { id: "5-5", name: "B05-サンプル庫", dept: "B05", base: "HP" },
-                    // KP
-                    { id: "28", name: "事務所", dept: "11B", base: "KP" },
-                    { id: "kp-1-2", name: "プレス1号機", dept: "11B", base: "KP" },
-                    { id: "kp-1-3", name: "プレス2号機", dept: "11B", base: "KP" },
-                    { id: "kp-1-4", name: "切断エリア", dept: "11B", base: "KP" },
-                    { id: "kp-1-5", name: "11B-物流バース", dept: "11B", base: "KP" },
-                    { id: "kp-2-1", name: "次世代CTPJ", dept: "18号館", base: "KP" },
-                    { id: "kp-2-2", name: "試作開発室", dept: "18号館", base: "KP" },
-                    { id: "kp-2-3", name: "組立室", dept: "18号館", base: "KP" },
-                    { id: "kp-2-4", name: "検査場", dept: "18号館", base: "KP" },
-                    { id: "kp-2-5", name: "18号館スリット室", dept: "18号館", base: "KP" },
-                    { id: "kp-3-1", name: "GIセンター", dept: "物流課", base: "KP" },
-                    { id: "kp-3-2", name: "出荷バース", dept: "物流課", base: "KP" },
-                    { id: "kp-3-3", name: "入荷バース", dept: "物流課", base: "KP" },
-                    { id: "kp-3-4", name: "梱包エリアA", dept: "物流課", base: "KP" },
-                    { id: "kp-3-5", name: "梱包エリアB", dept: "物流課", base: "KP" },
-                    // FP
-                    { id: "13", name: "防水エリア", dept: "製造一課", base: "FP" },
-                    { id: "14", name: "調合エリア", dept: "製造一課", base: "FP" },
-                    { id: "fp-1-3", name: "一課-洗浄室", dept: "製造一課", base: "FP" },
-                    { id: "fp-1-4", name: "一課-充填機", dept: "製造一課", base: "FP" },
-                    { id: "fp-1-5", name: "一課-材料置場", dept: "製造一課", base: "FP" },
-                    { id: "17", name: "電着C", dept: "製造三課", base: "FP" },
-                    { id: "18", name: "電着D", dept: "製造三課", base: "FP" },
-                    { id: "19", name: "ユニベックス", dept: "製造三課", base: "FP" },
-                    { id: "fp-3-4", name: "三課-研磨室", dept: "製造三課", base: "FP" },
-                    { id: "fp-3-5", name: "三課-廃液室", dept: "製造三課", base: "FP" },
-                    { id: "23", name: "尺取", dept: "製造五課", base: "FP" },
-                    { id: "24", name: "旋盤", dept: "製造五課", base: "FP" },
-                    { id: "25", name: "発泡エリア", dept: "製造五課", base: "FP" },
-                    { id: "26", name: "NPライン", dept: "製造五課", base: "FP" },
-                    { id: "27", name: "ダイヤライン", dept: "製造五課", base: "FP" }
-                ],
-                categories: [
-                    // HP 用 (ID 1-12)
-                    { id: "1", name: "普通ごみ", targetBase: "HP", detail: "一般ごみ" },
-                    { id: "2", name: "木くず", targetBase: "HP", detail: "木屑（パレット）" },
-                    { id: "3", name: "再生フィルム", targetBase: "HP", detail: "再生フィルムA" },
-                    { id: "4", name: "紙屑", targetBase: "HP", detail: "コピー紙、雑誌、カタログ" },
-                    { id: "5", name: "ダンボール", targetBase: "HP", detail: "梱包資材" },
-                    { id: "6", name: "金属屑", targetBase: "HP", detail: "鉄屑、アルミ缶、ドラム缶" },
-                    { id: "7", name: "ガラス屑", targetBase: "HP", detail: "蛍光灯、陶磁器類" },
-                    { id: "11", name: "有機溶剤廃液", targetBase: "HP", detail: "有機系洗浄液" },
-                    // FP 用 (ID 13-17)
-                    { id: "13", name: "廃液", targetBase: "FP", detail: "製造廃液" },
-                    { id: "14", name: "固形燃料", targetBase: "FP", detail: "一般ゴミ由来の固形燃料" },
-                    { id: "15", name: "製品廃材", targetBase: "FP", detail: "製品端材" },
-                    { id: "16", name: "研磨材", targetBase: "FP", detail: "廃棄砂" },
-                    { id: "17", name: "一斗缶", targetBase: "FP", detail: "空の一斗缶" },
-                    // KP 用 (ID 18-21)
-                    { id: "18", name: "可燃ごみ", targetBase: "KP", detail: "可燃ごみ全般" },
-                    { id: "19", name: "木くず", targetBase: "KP", detail: "木屑（パレット含む）" },
-                    { id: "20", name: "紙屑", targetBase: "KP", detail: "段ボール、書籍" },
-                    { id: "21", name: "廃プラスチック", targetBase: "KP", detail: "梱包フィルム、PPバンド" }
-                ],
-                feedbackUrl: "https://docs.google.com/forms/d/e/1FAIpQLSc2o-gFnK_IbLbFGZ86ryMLbY1A8hwJBkRYZ48dp4eO25CHMA/viewform?entry.176781763=%E5%BB%83%E6%A3%84%E7%89%A9%E5%A0%B1%E5%91%8A",
-                registeredData: {}, serverTime: Date.now()
-            };
-        }
 
         function initApp() {
             try {
@@ -616,11 +475,7 @@
                 if (!rawPayload || rawPayload.indexOf('<' + '?') === 0 || rawPayload === "undefined" || rawPayload === "") { 
                     decoded = getDemoData(); 
                 } else {
-                    try {
-                        decoded = JSON.parse(rawPayload);
-                    } catch(e) { 
-                        decoded = getDemoData(); 
-                    }
+                    try { decoded = JSON.parse(rawPayload); } catch(e) { decoded = getDemoData(); }
                 }
                 Object.assign(state, decoded); 
                 state.serverTime = decoded.serverTime || Date.now(); 
@@ -637,20 +492,60 @@
                 }
                 document.getElementById('display-user-email').innerText = userEmail;
                 document.getElementById('global-user-avatar').src = "https://ui-avatars.com/api/?background=2563eb&color=fff&bold=true&name=" + encodeURIComponent(userEmail);
-                
                 setTimeout(() => {
                     document.getElementById('loader').style.display = 'none'; 
                     document.getElementById('app-content').classList.remove('hidden');
                 }, 100);
-
                 initEventListeners();
                 initSwipeSupport();
             } catch (e) { document.getElementById('loader').style.display = 'none'; }
         }
 
-        function openFeedbackForm() {
-            if (state.feedbackUrl) window.open(state.feedbackUrl, '_blank');
-            else showToast("URLが設定されていません", "warning");
+        function isCategoryAllowed(cat, base) {
+            if (!cat.targetBase || cat.targetBase.trim() === "") return true; 
+            if (!base) return false;
+            const targets = cat.targetBase.split(',').map(t => t.trim().toUpperCase());
+            return targets.includes(base.trim().toUpperCase());
+        }
+
+        function showTooltip(id, e) {
+            if (e) e.stopPropagation();
+            const el = document.getElementById(`tooltip-${id}`);
+            if (!el) return;
+            document.querySelectorAll('[id^="tooltip-"]').forEach(t => {
+                if (t.id !== `tooltip-${id}`) {
+                    t.classList.add('invisible', 'opacity-0'); t.classList.remove('visible', 'opacity-100');
+                }
+            });
+            el.classList.remove('invisible', 'opacity-0');
+            el.classList.add('visible', 'opacity-100');
+            if (tooltipTimers[id]) clearTimeout(tooltipTimers[id]);
+            tooltipTimers[id] = setTimeout(() => {
+                el.classList.add('invisible', 'opacity-0'); el.classList.remove('visible', 'opacity-100');
+            }, 3000);
+        }
+
+        function getDemoData() {
+            return {
+                userExists: false,
+                locations: [
+                    { id: "1", name: "CR1", dept: "B01", base: "HP" },
+                    { id: "1-2", name: "CR2", dept: "B01", base: "HP" },
+                    { id: "2", name: "検査室", dept: "B04", base: "HP" },
+                    { id: "28", name: "事務所", dept: "11B", base: "KP" },
+                    { id: "kp-1-2", name: "プレス1号機", dept: "11B", base: "KP" },
+                    { id: "13", name: "防水エリア", dept: "製造一課", base: "FP" },
+                    { id: "14", name: "調合エリア", dept: "製造一課", base: "FP" }
+                ],
+                categories: [
+                    { id: "1", name: "普通ごみ", targetBase: "HP", detail: "一般ごみ" },
+                    { id: "2", name: "木くず", targetBase: "HP", detail: "木屑" },
+                    { id: "13", name: "廃液", targetBase: "FP", detail: "製造廃液" },
+                    { id: "18", name: "可燃ごみ", targetBase: "KP", detail: "可燃ごみ全般" }
+                ],
+                feedbackUrl: "",
+                registeredData: {}, serverTime: Date.now()
+            };
         }
 
         function initRoomNavigation() {
@@ -672,13 +567,9 @@
                 if (activeSliderCatId) return;
                 if (iconTimer) { clearTimeout(iconTimer); iconTimer = null; if (checkUnsavedChanges()) showDescriptionView(); } 
             };
-            trigger.addEventListener('mousedown', startHandler);
-            trigger.addEventListener('mouseup', endHandler);
-            trigger.addEventListener('touchstart', startHandler, {passive: true});
-            trigger.addEventListener('touchend', endHandler, {passive: true});
-            document.getElementById('btn-avatar').addEventListener('click', function() { 
-                if (activeSliderCatId) return; if (checkUnsavedChanges()) showRegistrationView(); 
-            });
+            trigger.addEventListener('mousedown', startHandler); trigger.addEventListener('mouseup', endHandler);
+            trigger.addEventListener('touchstart', startHandler, {passive: true}); trigger.addEventListener('touchend', endHandler, {passive: true});
+            document.getElementById('btn-avatar').addEventListener('click', function() { if (activeSliderCatId) return; if (checkUnsavedChanges()) showRegistrationView(); });
             document.getElementById('btn-select-today').addEventListener('click', function(e) { e.stopPropagation(); if(!this.disabled) setToday(); });
             document.getElementById('calendar-toggle-group').addEventListener('click', function() { if (activeSliderCatId) return; toggleCalendar(); });
             document.getElementById('btn-prev-month').addEventListener('click', function() { animateMonthChange(-1); });
@@ -687,51 +578,29 @@
             document.getElementById('btn-save-report').addEventListener('click', submitReport);
             document.getElementById('btn-clear-changes').addEventListener('click', clearChanges);
             document.getElementById('btn-reg-back').addEventListener('click', function() { if(!this.disabled) showMainView(false); });
-            document.getElementById('btn-back-description').addEventListener('click', function() { 
-                if (!state.userExists || !state.isRegLocked) showRegistrationView();
-                else showMainView(false); 
-            });
-            document.querySelectorAll('.btn-adjust').forEach(btn => {
-                btn.addEventListener('click', function() { adjustValue(parseInt(this.dataset.val)); });
-            });
+            document.getElementById('btn-back-description').addEventListener('click', function() { if (!state.userExists || !state.isRegLocked) showRegistrationView(); else showMainView(false); });
+            document.querySelectorAll('.btn-adjust').forEach(btn => { btn.addEventListener('click', function() { adjustValue(parseInt(this.dataset.val)); }); });
         }
 
         function showToast(m, type = 'success') { 
             if (toastTimer) clearTimeout(toastTimer);
             var t = document.getElementById('toast'), tx = document.getElementById('toast-text'), ti = document.getElementById('toast-icon'); 
             t.classList.remove('visible', 'toast-bottom', 'toast-top');
-            
             if (type === 'warning') { 
                 ti.className = "fas fa-exclamation-triangle text-orange-400 text-2xl"; 
                 tx.innerHTML = m || "未報告のデータがあります<br>先に報告をしてください";
                 t.classList.add('toast-top');
             } else {
-                if (type === 'info') {
-                    ti.className = "fas fa-circle-info text-blue-400 text-2xl"; 
-                } else if (type === 'reset') {
-                    ti.className = "fas fa-rotate-left text-slate-400 text-2xl"; 
-                } else { 
-                    ti.className = "fas fa-check-circle text-emerald-400 text-2xl"; 
-                }
-                tx.innerHTML = m;
-                t.classList.add('toast-bottom');
+                ti.className = (type === 'info') ? "fas fa-circle-info text-blue-400 text-2xl" : ((type === 'reset') ? "fas fa-rotate-left text-slate-400 text-2xl" : "fas fa-check-circle text-emerald-400 text-2xl");
+                tx.innerHTML = m; t.classList.add('toast-bottom');
             }
-            
             setTimeout(() => t.classList.add('visible'), 50);
-            var delay = (type === 'warning' || type === 'info' || type === 'reset') ? 3500 : 2500;
-            toastTimer = setTimeout(hideToast, delay); 
+            toastTimer = setTimeout(hideToast, (type === 'warning' || type === 'info' || type === 'reset') ? 3500 : 2500); 
         }
 
-        function hideToast() {
-            var t = document.getElementById('toast');
-            t.classList.remove('visible');
-            if (toastTimer) clearTimeout(toastTimer);
-        }
+        function hideToast() { var t = document.getElementById('toast'); t.classList.remove('visible'); if (toastTimer) clearTimeout(toastTimer); }
 
-        function checkUnsavedChanges() {
-            if (Object.keys(state.pendingChanges).length > 0) { showToast("", "warning"); return false; }
-            return true;
-        }
+        function checkUnsavedChanges() { if (Object.keys(state.pendingChanges).length > 0) { showToast("", "warning"); return false; } return true; }
 
         function syncHeaderStatus() {
             var curRoomId = String(state.userSetting?.roomId || "").trim();
@@ -739,6 +608,29 @@
             document.getElementById('badge-base').innerText = state.userSetting ? state.userSetting.base : "---"; 
             document.getElementById('display-dept-short').innerText = room ? room.dept : "未設定";
             document.getElementById('header-status-bar').style.display = 'flex';
+        }
+
+        function showMainView(forceExpand = false) { 
+            document.getElementById('app-body').classList.add('is-main-view');
+            hideAllViews();
+            document.getElementById('view-main').classList.remove('hidden'); 
+            document.getElementById('view-main-sticky').classList.remove('hidden'); 
+            document.getElementById('sticky-calendar-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden');
+            syncHeaderStatus(); updateDateDisplay(); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); 
+            setTimeout(renderHistory, 10);
+            if (forceExpand) { var el = document.getElementById('calendar-expansion'); if (!el.classList.contains('open')) toggleCalendar(); }
+        }
+
+        function showRegistrationView() { 
+            document.getElementById('app-body').classList.remove('is-main-view');
+            hideAllViews();
+            document.getElementById('view-registration').classList.remove('hidden'); 
+            document.getElementById('sticky-registration-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden');
+            syncHeaderStatus();
+            if (state.userSetting) { state.selectedRegBase = state.userSetting.base; updateRegUI(true); } 
+            else { state.selectedRegBase = null; state.isRegLocked = false; updateRegUI(); }
         }
 
         function showDescriptionView() {
@@ -760,36 +652,6 @@
             });
         }
 
-        function showRegistrationView() { 
-            document.getElementById('app-body').classList.remove('is-main-view');
-            hideAllViews();
-            document.getElementById('view-registration').classList.remove('hidden'); 
-            document.getElementById('sticky-registration-bar').classList.remove('hidden');
-            document.getElementById('calendar-separator').classList.remove('hidden');
-            syncHeaderStatus();
-            if (state.userSetting) { state.selectedRegBase = state.userSetting.base; updateRegUI(true); } 
-            else { state.selectedRegBase = null; state.isRegLocked = false; updateRegUI(); }
-        }
-
-        function showMainView(forceExpand = false) { 
-            document.getElementById('app-body').classList.add('is-main-view');
-            hideAllViews();
-            document.getElementById('view-main').classList.remove('hidden'); 
-            document.getElementById('view-main-sticky').classList.remove('hidden'); 
-            document.getElementById('sticky-calendar-bar').classList.remove('hidden');
-            document.getElementById('calendar-separator').classList.remove('hidden');
-            syncHeaderStatus();
-            updateDateDisplay(); 
-            renderCategoryCards(); 
-            renderCalendar(); 
-            updateFooterVisibility(); 
-            
-            // 高速化案3: 履歴描画をわずかに遅延させメインUIの応答性を優先
-            setTimeout(renderHistory, 10);
-
-            if (forceExpand) { var el = document.getElementById('calendar-expansion'); if (!el.classList.contains('open')) toggleCalendar(); }
-        }
-
         function updateRegUI(isInit = false) {
             var b = state.selectedRegBase ? state.selectedRegBase.trim() : null;
             var isLocked = state.isRegLocked;
@@ -797,38 +659,28 @@
             btnBack.disabled = !state.userExists || !isLocked;
             var badge = document.getElementById('lock-badge');
             badge.innerText = isLocked ? "LOCKED" : "UNLOCKED";
-            if (isLocked) {
-                badge.className = "absolute left-0 px-2 py-1 bg-slate-200 text-slate-500 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent";
-            } else {
-                badge.className = "absolute left-0 px-2 py-1 bg-emerald-50 text-emerald-900 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm today-striped border border-emerald-100 z-10";
-            }
+            badge.className = isLocked ? "absolute left-0 px-2 py-1 bg-slate-200 text-slate-500 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent" : "absolute left-0 px-2 py-1 bg-emerald-50 text-emerald-900 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm today-striped border border-emerald-100 z-10";
             ['KP', 'HP', 'FP'].forEach(id => { 
                 var el = document.getElementById(`base-${id}`);
                 if (el) {
-                    if (id.toUpperCase() === (b || "").toUpperCase()) el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-slate-200 border-2 border-slate-300 font-black text-xl text-slate-500 flex items-center justify-center cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-emerald-600 border-none font-black text-xl text-white flex items-center justify-center shadow-lg transform scale-105 transition-transform";
-                    else {
-                        el.className = "btn-base-select h-12 rounded-xl bg-white border border-slate-200 font-black text-xl text-slate-400 flex items-center justify-center transition-all";
-                        if (isLocked) el.classList.add('opacity-40', 'cursor-not-allowed');
+                    if (id.toUpperCase() === (b || "").toUpperCase()) {
+                        el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-slate-200 border-none font-black text-xl text-slate-500 flex items-center justify-center cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-emerald-600 border-none font-black text-xl text-white flex items-center justify-center shadow-lg transform scale-105 transition-transform";
+                    } else {
+                        el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-white border-none font-black text-xl text-slate-400 flex items-center justify-center opacity-40 cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-white border border-slate-200 font-black text-xl text-slate-400 flex items-center justify-center transition-all";
                     }
                 }
             });
             var dSel = document.getElementById('reg-dept-select'), rSel = document.getElementById('reg-room-select');
             dSel.disabled = isLocked || !b; rSel.disabled = isLocked || !dSel.value;
             if (!b) { 
-                dSel.innerHTML = '<option value="">未選択</option>'; 
-                rSel.innerHTML = '<option value="">未選択</option>'; 
-                rSel.value = "";
+                dSel.innerHTML = '<option value="">未選択</option>'; rSel.innerHTML = '<option value="">未選択</option>'; 
             } else {
                 var depts = [...new Set(state.locations.filter(l => l.base.trim().toUpperCase() === b.toUpperCase()).map(l => (l.dept || "未分類").trim()))]; 
-                var currentVal = dSel.value;
                 dSel.innerHTML = '<option value="">選択してください</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
                 if (isInit && state.userSetting) { 
                     var curRoomId = String(state.userSetting.roomId).trim();
                     var cur = state.locations.find(l => String(l.id).trim() === curRoomId); 
                     if (cur) { dSel.value = cur.dept.trim(); onRegDeptChange(true); } 
-                } else if (!isInit && currentVal && depts.includes(currentVal)) { 
-                    dSel.value = currentVal; 
-                    onRegDeptChange(false); 
                 }
             }
             renderRegistrationFooter();
@@ -839,225 +691,106 @@
             if (state.isRegLocked) {
                 cont.innerHTML = `<button onclick=\"unlockReg()\" class=\"btn-action btn-dark font-bold\"><i class=\"fas fa-unlock mr-2\"></i>ロックを解除</button>`;
             } else {
-                var b = state.selectedRegBase;
-                var d = document.getElementById('reg-dept-select').value;
-                var r = document.getElementById('reg-room-select').value;
+                var b = state.selectedRegBase, d = document.getElementById('reg-dept-select').value, r = document.getElementById('reg-room-select').value;
                 var isValid = b && (d !== "" && d !== "選択してください") && (r !== "" && r !== "選択してください");
                 cont.innerHTML = `<button id=\"btn-reg-change\" onclick=\"submitRegistration()\" class=\"btn-action btn-dark text-white font-bold\" ${isValid ? '' : 'disabled'}><i class=\"fas fa-lock mr-2\"></i>この設定で保存する</button>`;
             }
         }
 
-        function unlockReg() { 
-            state.isRegLocked = false; 
-            document.getElementById('reg-dept-select').value = "";
-            document.getElementById('reg-room-select').value = "";
-            updateRegUI(); 
-        }
+        function unlockReg() { state.isRegLocked = false; document.getElementById('reg-dept-select').value = ""; document.getElementById('reg-room-select').value = ""; updateRegUI(); }
 
-        function regSelectBase(b) { 
-            if(state.isRegLocked) { return; }
-            state.selectedRegBase = b.trim();
-            document.getElementById('reg-dept-select').value = ""; 
-            document.getElementById('reg-room-select').value = "";
-            updateRegUI();
-            renderRegistrationFooter(); 
-        }
+        function regSelectBase(b) { if(state.isRegLocked) return; state.selectedRegBase = b.trim(); document.getElementById('reg-dept-select').value = ""; document.getElementById('reg-room-select').value = ""; updateRegUI(); }
 
         function onRegDeptChange(isInit = false) { 
-            var b = state.selectedRegBase ? state.selectedRegBase.trim() : null;
-            var d = document.getElementById('reg-dept-select').value;
-            var rSel = document.getElementById('reg-room-select'); 
-            
+            var b = state.selectedRegBase?.trim(), d = document.getElementById('reg-dept-select').value, rSel = document.getElementById('reg-room-select'); 
             if (!d || d === "" || d === "選択してください" || !b) { 
-                rSel.disabled = true; 
-                rSel.innerHTML = '<option value="">未選択</option>'; 
-                rSel.value = "";
+                rSel.disabled = true; rSel.innerHTML = '<option value="">未選択</option>'; 
             } else { 
                 rSel.disabled = state.isRegLocked; 
                 var rms = state.locations.filter(l => l.base.trim().toUpperCase() === b.toUpperCase() && (l.dept || "未分類").trim() === d.trim()); 
                 rSel.innerHTML = '<option value="">選択してください</option>' + rms.map(r => `<option value="${String(r.id).trim()}">${r.name}</option>`).join(''); 
-                
-                if (isInit && state.userSetting) {
-                    rSel.value = String(state.userSetting.roomId).trim(); 
-                } else {
-                    rSel.value = ""; 
-                }
+                if (isInit && state.userSetting) rSel.value = String(state.userSetting.roomId).trim(); 
             } 
             renderRegistrationFooter();
         }
 
-        function onRegRoomChange() { 
-            renderRegistrationFooter(); 
-        }
+        function onRegRoomChange() { renderRegistrationFooter(); }
 
         function submitRegistration() { 
-            var rId = document.getElementById('reg-room-select').value;
-            var b = state.selectedRegBase;
-            var btn = document.getElementById('btn-reg-change');
-            if (!rId || rId === "" || !b) return;
-            if (btn) { 
-                btn.disabled = true; 
-                btn.innerHTML = '<i class="fas fa-circle-notch animate-spin mr-2"></i><span>保存中...</span>'; 
-            }
+            var rId = document.getElementById('reg-room-select').value, b = state.selectedRegBase, btn = document.getElementById('btn-reg-change');
+            if (!rId || !b) return;
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch animate-spin mr-2"></i><span>保存中...</span>'; }
             google.script.run.withSuccessHandler(function(res) { 
                 if (res && res.success) {
                     state.userSetting = { base: b, roomId: rId }; state.userExists = true; state.isRegLocked = true;
-                    initRoomNavigation(); syncHeaderStatus(); showMainView(true); 
-                    showToast("設定を保存しました", "success"); 
+                    initRoomNavigation(); syncHeaderStatus(); showMainView(true); showToast("設定を保存しました", "success"); 
                 } else { 
-                    showToast("保存失敗", "warning"); 
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock mr-2"></i>この設定で保存する'; }
+                    showToast("保存失敗", "warning"); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock mr-2"></i>この設定で保存する'; }
                 }
             }).registerUserSetting(b, rId); 
         }
 
-        function handleInputFocus(el) { 
-            if (!el) return;
-            setTimeout(() => { el.focus(); }, 350); 
-        }
-
         function openSlider(id, name) { 
-            activeSliderCatId = id; 
-            var curRoomId = String(state.userSetting?.roomId || "").trim();
+            activeSliderCatId = id; var curRoomId = String(state.userSetting?.roomId || "").trim();
             preSliderState.input = inputValues[id] || 0;
             var regVal = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[id] || 0;
             preSliderState.correction = (correctionValues[id] !== undefined) ? correctionValues[id] : regVal;
-
-            document.getElementById('slider-cat-name').innerText = name; 
-            document.getElementById('slider-cat-id').innerText = "ID: " + id;
+            document.getElementById('slider-cat-name').innerText = name; document.getElementById('slider-cat-id').innerText = "ID: " + id;
             var room = state.locations.find(l => String(l.id).trim() === curRoomId);
             document.getElementById('slider-location-name').innerText = room ? room.name : "---";
-            
-            // カテゴリ詳細の表示制御: 常に表示し、フォントスタイルを更新
             var catObj = state.categories.find(c => String(c.id).trim() === String(id).trim());
-            var detailArea = document.getElementById('slider-cat-detail');
-            if (catObj && catObj.detail) {
-                detailArea.innerText = catObj.detail;
-                detailArea.classList.remove('hidden');
-            } else {
-                detailArea.classList.add('hidden');
-            }
-
+            var dArea = document.getElementById('slider-cat-detail');
+            if (catObj && catObj.detail) { dArea.innerText = catObj.detail; dArea.classList.remove('hidden'); } else dArea.classList.add('hidden');
             if (correctionValues[id] === undefined) correctionValues[id] = regVal;
             document.getElementById('registered-val-field').value = correctionValues[id].toFixed(1);
-            var curInput = inputValues[id] || 0;
-            document.getElementById('manual-input-field').value = curInput > 0 ? curInput.toFixed(1) : ""; 
-            
-            document.getElementById('edit-lock-toggle').checked = false;
-            document.getElementById('edit-lock-toggle').disabled = (regVal <= 0);
-            toggleEditLock(false);
-            
-            // 背面スクロール抑止: bodyにロック用クラスを付与
-            document.body.classList.add('lock-scroll');
-
-            document.getElementById('slider-backdrop').classList.add('visible');
-            document.getElementById('slider-panel').style.display = 'block'; 
+            var curInput = inputValues[id] || 0; document.getElementById('manual-input-field').value = curInput > 0 ? curInput.toFixed(1) : ""; 
+            document.getElementById('edit-lock-toggle').checked = false; document.getElementById('edit-lock-toggle').disabled = (regVal <= 0);
+            toggleEditLock(false); document.body.classList.add('lock-scroll');
+            document.getElementById('slider-backdrop').classList.add('visible'); document.getElementById('slider-panel').style.display = 'block'; 
             setTimeout(() => { document.getElementById('slider-panel').classList.add('visible'); }, 10); 
         }
 
-        function updateSliderButtonState() {
-            var btn = document.getElementById('btn-confirm-slider');
-            if (!activeSliderCatId) { btn.disabled = true; return; }
-            var curRoomId = String(state.userSetting?.roomId || "").trim();
-            var origRegVal = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[activeSliderCatId] || 0;
-            var curInputVal = inputValues[activeSliderCatId] || 0;
-            var curCorrectionVal = correctionValues[activeSliderCatId] !== undefined ? correctionValues[activeSliderCatId] : origRegVal;
-            btn.disabled = !(curInputVal > 0 || Math.abs(curCorrectionVal - origRegVal) >= 0.01);
-        }
-
-        function toggleEditLock(checked) { 
-            var regField = document.getElementById('registered-val-field');
-            var manualField = document.getElementById('manual-input-field');
-            var slider = document.getElementById('input-slider');
-            var labelManual = document.getElementById('label-manual');
-            var labelRegistered = document.getElementById('label-registered');
-
-            if (checked) {
-                regField.disabled = false;
-                regField.classList.add('bg-blue-100', '!border-slate-900'); 
-                manualField.disabled = true;
-                manualField.classList.remove('bg-blue-100', '!border-slate-900');
-                labelManual.classList.add('opacity-40');
-                labelRegistered.classList.remove('opacity-40');
-                slider.value = Math.min(100, parseFloat(regField.value) || 0);
-                handleInputFocus(regField);
-            } else {
-                regField.disabled = true;
-                regField.classList.remove('bg-blue-100', '!border-slate-900');
-                manualField.disabled = false;
-                manualField.classList.add('bg-blue-100', '!border-slate-900');
-                labelManual.classList.remove('opacity-40');
-                labelRegistered.classList.add('opacity-40');
-                slider.value = Math.min(100, parseFloat(manualField.value) || 0);
-                handleInputFocus(manualField);
-            }
-            updateSliderButtonState();
-        }
-
         function closeSlider() { 
-            document.getElementById('slider-panel').classList.remove('visible'); 
-            document.getElementById('slider-backdrop').classList.remove('visible');
-            if (activeSliderCatId && (inputValues[activeSliderCatId] > 0)) {
-                var el = document.getElementById('calendar-expansion');
-                if (el.classList.contains('open')) toggleCalendar(true); 
-            }
-            
-            // スクロール制限解除
+            document.getElementById('slider-panel').classList.remove('visible'); document.getElementById('slider-backdrop').classList.remove('visible');
+            if (activeSliderCatId && (inputValues[activeSliderCatId] > 0)) { var el = document.getElementById('calendar-expansion'); if (el.classList.contains('open')) toggleCalendar(true); }
             document.body.classList.remove('lock-scroll');
-
             setTimeout(() => { if (!document.getElementById('slider-panel').classList.contains('visible')) document.getElementById('slider-panel').style.display = 'none'; }, 300); 
             activeSliderCatId = null; renderCalendar(); 
         }
 
-        function cancelSlider() {
-            if (activeSliderCatId) {
-                inputValues[activeSliderCatId] = preSliderState.input;
-                correctionValues[activeSliderCatId] = preSliderState.correction;
-                saveCurrentToCache();
-                renderCategoryCards();
-                updateFooterVisibility();
-            }
-            closeSlider();
-        }
+        function cancelSlider() { if (activeSliderCatId) { inputValues[activeSliderCatId] = preSliderState.input; correctionValues[activeSliderCatId] = preSliderState.correction; saveCurrentToCache(); renderCategoryCards(); updateFooterVisibility(); } closeSlider(); }
 
         function adjustValue(n) { 
-            var isRegMode = document.getElementById('edit-lock-toggle').checked;
-            var fieldId = isRegMode ? 'registered-val-field' : 'manual-input-field';
-            var field = document.getElementById(fieldId);
-            var current = parseFloat(field.value) || 0;
-            var next = current + n;
-            if (!isRegMode && next < 0) next = 0;
-            field.value = next.toFixed(1);
-            if (isRegMode) onRegisteredValChange(next); else onManualInput(next);
+            var isReg = document.getElementById('edit-lock-toggle').checked, field = document.getElementById(isReg ? 'registered-val-field' : 'manual-input-field');
+            var next = (parseFloat(field.value) || 0) + n; if (!isReg && next < 0) next = 0;
+            field.value = next.toFixed(1); if (isReg) onRegisteredValChange(next); else onManualInput(next);
         }
 
-        function onManualInput(v) { 
-            var n = parseFloat(v); 
-            if (!isNaN(n)) { 
-                if (n < 0) { n = 0; document.getElementById('manual-input-field').value = "0.0"; }
-                document.getElementById('input-slider').value = Math.min(100, n); 
-                updateValues(n); 
-            } else { updateValues(0); } 
+        function onManualInput(v) { var n = parseFloat(v); if (!isNaN(n)) { if (n < 0) { n = 0; document.getElementById('manual-input-field').value = "0.0"; } document.getElementById('input-slider').value = Math.min(100, n); updateValues(n); } else updateValues(0); }
+
+        function onSliderInput(v) { var n = parseFloat(v), isReg = document.getElementById('edit-lock-toggle').checked; document.getElementById(isReg ? 'registered-val-field' : 'manual-input-field').value = n.toFixed(1); if (isReg) onRegisteredValChange(n); else onManualInput(n); }
+
+        function onRegisteredValChange(v) { var n = parseFloat(v); if (!isNaN(n) && activeSliderCatId) { correctionValues[activeSliderCatId] = n; saveCurrentToCache(); renderCategoryCards(); updateFooterVisibility(); updateSliderButtonState(); document.getElementById('input-slider').value = Math.min(100, n); } }
+
+        function toggleEditLock(checked) { 
+            var rF = document.getElementById('registered-val-field'), mF = document.getElementById('manual-input-field'), sl = document.getElementById('input-slider');
+            var lM = document.getElementById('label-manual'), lR = document.getElementById('label-registered');
+            if (checked) {
+                rF.disabled = false; rF.classList.add('bg-blue-100', '!border-slate-900'); mF.disabled = true; mF.classList.remove('bg-blue-100', '!border-slate-900');
+                lM.classList.add('opacity-40'); lR.classList.remove('opacity-40'); sl.value = Math.min(100, parseFloat(rF.value) || 0); handleInputFocus(rF);
+            } else {
+                rF.disabled = true; rF.classList.remove('bg-blue-100', '!border-slate-900'); mF.disabled = false; mF.classList.add('bg-blue-100', '!border-slate-900');
+                lM.classList.remove('opacity-40'); lR.classList.add('opacity-40'); sl.value = Math.min(100, parseFloat(mF.value) || 0); handleInputFocus(mF);
+            }
+            updateSliderButtonState();
         }
 
-        function onSliderInput(v) { 
-            var n = parseFloat(v); 
-            var isRegMode = document.getElementById('edit-lock-toggle').checked;
-            var fieldId = isRegMode ? 'registered-val-field' : 'manual-input-field';
-            document.getElementById(fieldId).value = n.toFixed(1);
-            if (isRegMode) onRegisteredValChange(n); else onManualInput(n);
-        }
-
-        function onRegisteredValChange(v) { 
-            var n = parseFloat(v); 
-            if (!isNaN(n) && activeSliderCatId) { 
-                correctionValues[activeSliderCatId] = n; 
-                saveCurrentToCache(); 
-                renderCategoryCards(); 
-                updateFooterVisibility(); 
-                updateSliderButtonState(); 
-                document.getElementById('input-slider').value = Math.min(100, n);
-            } 
+        function updateSliderButtonState() {
+            var btn = document.getElementById('btn-confirm-slider'); if (!activeSliderCatId) { btn.disabled = true; return; }
+            var curRoomId = String(state.userSetting?.roomId || "").trim();
+            var orig = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[activeSliderCatId] || 0;
+            var curIn = inputValues[activeSliderCatId] || 0, curCorr = correctionValues[activeSliderCatId] !== undefined ? correctionValues[activeSliderCatId] : orig;
+            btn.disabled = !(curIn > 0 || Math.abs(curCorr - orig) >= 0.01);
         }
 
         function updateValues(n) { if (activeSliderCatId) { inputValues[activeSliderCatId] = n; saveCurrentToCache(); renderCategoryCards(); updateFooterVisibility(); updateSliderButtonState(); } }
@@ -1074,21 +807,14 @@
 
         function updateFooterVisibility() { document.getElementById('footer-actions').style.display = Object.keys(state.pendingChanges).length > 0 ? 'block' : 'none'; }
         
-        function clearChanges() {
-            if (Object.keys(state.pendingChanges).length === 0) return;
-            state.pendingChanges = {}; inputValues = {}; correctionValues = {};
-            renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
-            showToast("入力をクリアしました", "reset");
-        }
+        function clearChanges() { if (Object.keys(state.pendingChanges).length === 0) return; state.pendingChanges = {}; inputValues = {}; correctionValues = {}; renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory(); showToast("入力をクリアしました", "reset"); }
 
-        function toggleCalendar(silentFeedback = false) { 
+        function toggleCalendar(silent = false) { 
             var el = document.getElementById('calendar-expansion'), icon = document.getElementById('cal-toggle-icon'); 
-            el.classList.toggle('open'); 
-            icon.style.transform = el.classList.contains('open') ? 'rotate(0deg)' : 'rotate(180deg)'; 
-            if (silentFeedback) {
-                var container = document.getElementById('cal-toggle-icon-container');
-                container.classList.add('!bg-emerald-600', '!text-white');
-                setTimeout(() => container.classList.remove('!bg-emerald-600', '!text-white'), 200);
+            el.classList.toggle('open'); icon.style.transform = el.classList.contains('open') ? 'rotate(0deg)' : 'rotate(180deg)'; 
+            if (silent) {
+                var c = document.getElementById('cal-toggle-icon-container'); c.classList.add('!bg-emerald-600', '!text-white');
+                setTimeout(() => c.classList.remove('!bg-emerald-600', '!text-white'), 200);
             }
             renderCalendar(); 
         }
@@ -1108,294 +834,142 @@
         }
 
         function renderHistory() {
-            var listCont = document.getElementById('history-list');
-            var curRoomId = String(state.userSetting?.roomId || "").trim();
-            var dayData = state.registeredData[state.selectedDate]?.[curRoomId];
-            
-            if (!dayData || !dayData.logs || dayData.logs.length === 0) {
-                listCont.innerHTML = '<div class="text-center py-4 text-slate-400 text-sm font-bold">この日の登録データはありません</div>';
-                return;
-            }
-
-            var sortedLogs = [...dayData.logs].sort((a, b) => b.time.localeCompare(a.time));
-
-            var html = '<div class="flex flex-col gap-3">';
+            var listCont = document.getElementById('history-list'), curRoomId = String(state.userSetting?.roomId || "").trim(), dayData = state.registeredData[state.selectedDate]?.[curRoomId];
+            if (!dayData || !dayData.logs || dayData.logs.length === 0) { listCont.innerHTML = '<div class="text-center py-4 text-slate-400 text-sm font-bold">この日の登録データはありません</div>'; return; }
+            var sortedLogs = [...dayData.logs].sort((a, b) => b.time.localeCompare(a.time)), html = '<div class="flex flex-col gap-3">';
             sortedLogs.forEach(log => {
-                var fullTimeDisplay = "---";
-                if (log.time) {
-                    var dtParts = log.time.split(' '); // ["2024/03/12", "15:45:00"]
-                    if (dtParts.length >= 2) {
-                        var datePart = dtParts[0].split(/\/|-/).slice(1).join('/'); // MM/DD (/-対応)
-                        var timePart = dtParts[1].slice(0, 5); // HH:mm
-                        fullTimeDisplay = datePart + ' ' + timePart;
-                    } else if (dtParts.length === 1 && (log.time.includes('/') || log.time.includes('-'))) {
-                        fullTimeDisplay = log.time.split(/\/|-/).slice(1).join('/');
-                    } else {
-                        fullTimeDisplay = log.time;
-                    }
-                }
-                
-                html += `
-                    <div class="bg-white p-3 rounded-xl border-2 border-slate-100 shadow-sm flex flex-col gap-2">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded tracking-tighter">${fullTimeDisplay}</span>
-                                <span class="text-sm font-bold text-slate-800">${log.catName}</span>
-                            </div>
-                            <div class="flex items-baseline gap-0.5">
-                                <span class="text-lg font-black text-slate-900">${log.val.toFixed(1)}</span>
-                                <span class="text-[10px] font-bold text-slate-400 uppercase">Kg</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1.5 pt-1 border-t border-slate-50">
-                            <i class="fas fa-user text-[9px] text-slate-300"></i>
-                            <span class="text-[10px] font-bold text-slate-400 truncate flex-1">${log.user}</span>
-                        </div>
-                    </div>
-                `;
+                var disp = "---"; if (log.time) { var pts = log.time.split(' '); disp = pts.length >= 2 ? pts[0].split(/\/|-/).slice(1).join('/') + ' ' + pts[1].slice(0, 5) : log.time; }
+                html += `<div class="bg-white p-3 rounded-xl border-2 border-slate-100 shadow-sm flex flex-col gap-2"><div class="flex justify-between items-center"><div class="flex items-center gap-2"><span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded tracking-tighter">${disp}</span><span class="text-sm font-bold text-slate-800">${log.catName}</span></div><div class="flex items-baseline gap-0.5"><span class="text-lg font-black text-slate-900">${log.val.toFixed(1)}</span><span class="text-[10px] font-bold text-slate-400 uppercase">Kg</span></div></div><div class="flex items-center gap-1.5 pt-1 border-t border-slate-50"><i class="fas fa-user text-[9px] text-slate-300"></i><span class="text-[10px] font-bold text-slate-400 truncate flex-1">${log.user}</span></div></div>`;
             });
-            html += '</div>';
-            listCont.innerHTML = html;
+            listCont.innerHTML = html + '</div>';
         }
-        
+
         function animateMonthChange(n) {
             if (activeSliderCatId) return;
-            var wrapper = document.getElementById('calendar-slide-wrapper');
-            wrapper.style.transition = 'transform 0.3s ease-out'; wrapper.style.transform = n > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+            var w = document.getElementById('calendar-slide-wrapper'); w.style.transition = 'transform 0.3s ease-out'; w.style.transform = n > 0 ? 'translateX(-100%)' : 'translateX(100%)';
             setTimeout(() => {
-                calendarViewDate.setMonth(calendarViewDate.getMonth() + n); renderCalendar();
-                wrapper.style.transition = 'none'; wrapper.style.transform = n > 0 ? 'translateX(100%)' : 'translateX(-100%)';
-                setTimeout(() => { wrapper.style.transition = 'transform 0.3s ease-out'; wrapper.style.transform = 'translateX(0)'; }, 20);
+                calendarViewDate.setMonth(calendarViewDate.getMonth() + n); renderCalendar(); w.style.transition = 'none'; w.style.transform = n > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+                setTimeout(() => { w.style.transition = 'transform 0.3s ease-out'; w.style.transform = 'translateX(0)'; }, 20);
             }, 300);
         }
 
-        function setToday(c = true) { 
-            var n = new Date(state.serverTime); 
-            calendarViewDate = new Date(n); 
-            selectDateFromCal(n.toISOString().split('T')[0], false); 
-        }
+        function setToday(c = true) { var n = new Date(state.serverTime); calendarViewDate = new Date(n); selectDateFromCal(n.toISOString().split('T')[0], false); }
 
         function updateTodayButtonState() {
-            var btn = document.getElementById('btn-select-today');
-            var todayStr = new Date(state.serverTime).toISOString().split('T')[0];
-            var isSelected = state.selectedDate === todayStr;
-
-            if (isSelected) {
-                btn.disabled = true;
-                btn.innerText = "今日"; 
-                btn.className = "px-2 py-1 rounded-lg text-sm font-black bg-slate-200 text-slate-500 border border-transparent shadow-none cursor-not-allowed transition-all";
+            var btn = document.getElementById('btn-select-today'), todayStr = new Date(state.serverTime).toISOString().split('T')[0];
+            if (state.selectedDate === todayStr) {
+                btn.disabled = true; btn.innerText = "今日"; btn.className = "px-2 py-1 rounded-lg text-sm font-black bg-slate-200 text-slate-500 border border-transparent shadow-none cursor-not-allowed transition-all";
             } else {
-                btn.disabled = false;
-                btn.innerText = "今日を選択"; 
-                btn.className = "today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform cursor-pointer";
+                btn.disabled = false; btn.innerText = "今日を選択"; btn.className = "today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform cursor-pointer";
             }
         }
         
         function selectDateFromCal(ds, c = true) { 
-            if (activeSliderCatId) return;
-            state.selectedDate = ds; 
-            var cached = state.pendingChanges[ds] || { inputs: {}, corrections: {} };
+            if (activeSliderCatId) return; state.selectedDate = ds; var cached = state.pendingChanges[ds] || { inputs: {}, corrections: {} };
             inputValues = Object.assign({}, cached.inputs); correctionValues = Object.assign({}, cached.corrections);
-            updateDateDisplay(); 
-            updateTodayButtonState();
+            updateDateDisplay(); updateTodayButtonState();
             if (c && document.getElementById('calendar-expansion').classList.contains('open')) toggleCalendar(true); 
             renderCalendar(); renderCategoryCards(); updateFooterVisibility(); renderHistory();
         }
 
         function renderCalendar() {
             var grid = document.getElementById('calendar-grid'), y = calendarViewDate.getFullYear(), m = calendarViewDate.getMonth(); 
-            document.getElementById('calendar-title').innerText = y + "年 " + (m + 1) + "月";
-            grid.innerHTML = "";
-            var firstDate = new Date(y, m, 1), lastDate = new Date(y, m + 1, 0), firstDayIndex = firstDate.getDay(), prevMonthLastDate = new Date(y, m, 0).getDate();
-            var todayStr = new Date(state.serverTime).toISOString().split('T')[0], curRoomId = String(state.userSetting?.roomId || "").trim();
-            var myB = state.userSetting?.base;
-
-            for (var i = firstDayIndex - 1; i >= 0; i--) grid.innerHTML += '<div class="aspect-square flex items-center justify-center text-slate-400 text-[10px] font-bold">' + (prevMonthLastDate - i) + '</div>';
-            for (var d = 1; d <= lastDate.getDate(); d++) {
+            document.getElementById('calendar-title').innerText = y + "年 " + (m + 1) + "月"; grid.innerHTML = "";
+            var fD = new Date(y, m, 1), lD = new Date(y, m + 1, 0), fDI = fD.getDay(), pMLD = new Date(y, m, 0).getDate();
+            var tStr = new Date(state.serverTime).toISOString().split('T')[0], curRoomId = String(state.userSetting?.roomId || "").trim(), myB = state.userSetting?.base;
+            for (var i = fDI - 1; i >= 0; i--) grid.innerHTML += `<div class="h-9 flex items-center justify-center text-slate-400 text-[10px] font-bold">${pMLD - i}</div>`;
+            for (var d = 1; d <= lD.getDate(); d++) {
                 var ds = y + "-" + ("0" + (m + 1)).slice(-2) + "-" + ("0" + d).slice(-2);
-                var isSelected = state.selectedDate === ds, isToday = ds === todayStr, reg = state.registeredData[ds]?.[curRoomId], pending = state.pendingChanges[ds];
+                var isS = state.selectedDate === ds, isT = ds === tStr, reg = state.registeredData[ds]?.[curRoomId], pending = state.pendingChanges[ds];
                 var col = (new Date(y, m, d).getDay() === 0) ? "text-sunday" : (new Date(y, m, d).getDay() === 6 ? "text-saturday" : "text-[#334155]");
-                var styleClass = "aspect-square rounded-lg font-black text-sm flex flex-col items-center justify-center transition-all relative " + (isToday ? "today-striped " : (reg ? "bg-emerald-50 " : "bg-white ")) + (isSelected ? "border-2 border-emerald-600 text-emerald-700 " : "border border-transparent " + col);
-                var valHtml = '<div class="flex flex-col items-center">';
+                var styleClass = "h-9 w-full rounded-lg font-black text-[13px] flex items-center justify-center transition-all relative bg-white " + (isS ? "text-emerald-700 " : "border border-transparent " + col);
+                
+                var valTextHtml = '';
                 if (pending) {
-                    var origTotal = reg ? reg.total : 0;
-                    var pendingTotal = state.categories
-                        .filter(c => isCategoryAllowed(c, myB))
-                        .reduce((acc, c) => {
-                            var c_orig = (reg && reg.cats) ? reg.cats[c.id] || 0 : 0;
-                            return acc + ((pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : c_orig) + (pending.inputs[c.id] || 0));
-                        }, 0);
-                    var diff = pendingTotal - origTotal;
-                    if (Math.abs(diff) >= 0.01) {
-                        var sign = diff > 0 ? "+" : "";
-                        var colorClass = diff > 0 ? "text-pending-plus" : "text-pending-minus";
-                        valHtml += `<div class="calendar-val-pending ${colorClass}">${sign}${diff.toFixed(1)}</div>`;
-                    }
-                } else if (reg && reg.total > 0) {
-                    valHtml += '<div class="calendar-val">' + reg.total.toFixed(1) + '</div>';
+                    var diff = state.categories.filter(c => isCategoryAllowed(c, myB)).reduce((acc, c) => acc + ((pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : (reg?.cats?.[c.id] || 0)) + (pending.inputs[c.id] || 0)), 0) - (reg ? reg.total : 0);
+                    if (Math.abs(diff) >= 0.01) valTextHtml = `<div class="calendar-val-pending ${diff > 0 ? "text-pending-plus" : "text-pending-minus"}">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</div>`;
+                } else if (reg?.total > 0) {
+                    valTextHtml = `<div class="calendar-val">${reg.total.toFixed(1)}</div>`;
                 }
-                valHtml += '</div>';
-                grid.innerHTML += '<button id="cal-day-' + ds + '" class="' + styleClass + '">' + (pending ? '<div class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>' : '') + '<span>' + d + '</span>' + valHtml + '</button>';
+
+                var inner = "absolute inset-0.5 rounded-lg pointer-events-none";
+                var bgHtml = '';
+                // 全ての背景装飾をinset-0.5に統一
+                if (reg) bgHtml += `<div class="${inner} bg-emerald-50"></div>`;
+                if (isT) bgHtml += `<div class="${inner} today-striped border-none"></div>`;
+                if (isS) bgHtml += `<div class="${inner} border-2 border-emerald-600 z-10"></div>`;
+                
+                // 日付数値と数値を垂直方向で中央揃えにするためのコンテナ
+                var contentHtml = `
+                    <div class="relative z-20 flex flex-col items-center justify-center leading-none w-full">
+                        <div class="relative flex items-center justify-center h-4">
+                            <span>${d}</span>
+                            ${pending ? '<div class="absolute left-full ml-0.5 top-[1px] w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>' : ''}
+                        </div>
+                        ${valTextHtml}
+                    </div>
+                `;
+                
+                grid.innerHTML += `<button id="cal-day-${ds}" class="${styleClass}">${bgHtml}${contentHtml}</button>`;
                 (function(dStr) { setTimeout(() => { var b = document.getElementById('cal-day-'+dStr); if(b) b.onclick = function(){ selectDateFromCal(dStr); }; }, 0); })(ds);
             }
-            for (var d = 1; d <= 6 - lastDate.getDay(); d++) grid.innerHTML += '<div class="aspect-square flex items-center justify-center text-slate-400 text-[10px] font-bold">' + d + '</div>';
+            for (var d = 1; d <= 6 - lD.getDay(); d++) grid.innerHTML += `<div class="h-9 flex items-center justify-center text-slate-400 text-[10px] font-bold">${d}</div>`;
         }
 
         function renderCategoryCards() {
-            var cont = document.getElementById('input-rows'), myB = state.userSetting?.base, curRoomId = String(state.userSetting?.roomId || "").trim();
-            var room = state.locations.find(l => String(l.id).trim() === curRoomId);
+            var cont = document.getElementById('input-rows'), myB = state.userSetting?.base, curRoomId = String(state.userSetting?.roomId || "").trim(), room = state.locations.find(l => String(l.id).trim() === curRoomId);
             document.getElementById('current-room-display-name').innerText = "場所：" + (room ? room.name : "---");
-            var dotsCont = document.getElementById('room-dots-container');
-            if (dotsCont) dotsCont.innerHTML = state.roomsInDept.map((r, idx) => `<div class="w-1.5 h-1.5 rounded-full ${idx === state.activeRoomIndex ? 'bg-emerald-600' : 'bg-slate-200'}"></div>`).join('');
+            var dots = document.getElementById('room-dots-container'); if (dots) dots.innerHTML = state.roomsInDept.map((r, i) => `<div class="h-1.5 rounded-full transition-all duration-300 ${i === state.activeRoomIndex ? 'w-4 bg-emerald-600' : 'w-1.5 bg-slate-200'}"></div>`).join('');
             var reg = state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {};
-            var pending = state.pendingChanges[state.selectedDate];
-            
             cont.innerHTML = state.categories.filter(c => isCategoryAllowed(c, myB)).map(c => {
-                var origVal = reg[c.id] || 0, baseVal = correctionValues[c.id] !== undefined ? correctionValues[c.id] : origVal, newVal = inputValues[c.id] || 0;
-                var displayVal = baseVal + newVal;
-                var diff = displayVal - origVal;
-                var isPending = Math.abs(diff) >= 0.01;
-                
-                // ガタつき防止のため、常に border-2 を適用し、色だけを変更
-                var cardBorder = isPending ? "border-2 border-orange-500 bg-orange-50/20" : (displayVal > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border-2 border-slate-200 bg-white");
-                
-                var notationHtml = '';
-                if (isPending) {
-                    var sign = diff > 0 ? "+" : "";
-                    var color = diff > 0 ? "text-orange-500" : "text-blue-500";
-                    notationHtml = `<span class="text-sm font-black ${color} leading-none">${sign}${diff.toFixed(1)}</span>`;
-                }
-
-                // カード内オーバーレイ詳細 (中央配置・3秒表示・カレンダーの下に潜るようz-10に指定)
-                var tooltipHtml = c.detail ? `
-                    <div id="tooltip-${c.id}" class="absolute inset-3 bg-slate-900/90 text-white rounded-lg flex items-center justify-center p-2 opacity-0 invisible transition-all duration-200 z-10 pointer-events-none text-center">
-                        <p class="text-[12px] leading-snug font-medium">${c.detail}</p>
-                    </div>
-                ` : '';
-
-                // アイコンをfa-solid fa-circle-infoに変更。items-centerで廃棄物名ラベルと垂直中央揃え
-                var infoIconHtml = c.detail ? `
-                    <div class="cursor-help flex items-center" onclick="showTooltip('${c.id}', event)">
-                        <i class="fa-solid fa-circle-info text-slate-300 text-[15px]"></i>
-                    </div>
-                ` : '';
-
-                return `
-                    <div id="cat-card-${c.id}" class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all overflow-hidden ${cardBorder}" onclick="openSlider('${c.id}', '${c.name}')">
-                        ${tooltipHtml}
-                        <div>
-                            <!-- items-centerにより、詳細アイコンと廃棄物名ラベルが垂直中央で揃うように修正 -->
-                            <div class="flex items-center justify-between gap-1">
-                                <div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1 pr-1">${c.name}</div>
-                                ${infoIconHtml}
-                            </div>
-                            <div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div>
-                        </div>
-                        <!-- 重量表示エリア -->
-                        <div class="flex flex-col items-end pb-1.5 relative">
-                            <!-- 差分表示 (+xx): Kg表示の上部に絶対配置することで、Kg表示の垂直位置を固定 -->
-                            <div class="absolute bottom-full right-6 mb-0.5 whitespace-nowrap">
-                                ${notationHtml}
-                            </div>
-                            <div class="flex items-baseline gap-1">
-                                <div class="text-3xl font-black text-[#1e293b] leading-none">${displayVal.toLocaleString(undefined,{minimumFractionDigits:1})}</div>
-                                <div class="text-xs font-bold text-slate-500">Kg</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                var orig = reg[c.id] || 0, cur = (correctionValues[c.id] !== undefined ? correctionValues[c.id] : orig) + (inputValues[c.id] || 0), diff = cur - orig, isP = Math.abs(diff) >= 0.01;
+                return `<div class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all overflow-hidden ${isP ? "border-2 border-orange-500 bg-orange-50/20" : (cur > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border-2 border-slate-200 bg-white")}" onclick="openSlider('${c.id}', '${c.name}')">${c.detail ? `<div id="tooltip-${c.id}" class="absolute inset-3 bg-slate-900/90 text-white rounded-lg flex items-center justify-center p-2 opacity-0 invisible transition-all duration-200 z-10 pointer-events-none text-center"><p class="text-[12px] leading-snug font-medium">${c.detail}</p></div>` : ''}<div><div class="flex items-center justify-between gap-1"><div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1 pr-1">${c.name}</div>${c.detail ? `<div class="cursor-help flex items-center" onclick="showTooltip('${c.id}', event)"><i class="fa-solid fa-circle-info text-slate-300 text-[15px]"></i></div>` : ''}</div><div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div></div><div class="flex flex-col items-end pb-1.5 relative"><div class="absolute bottom-full right-6 mb-0.5 whitespace-nowrap">${isP ? `<span class="text-sm font-black ${diff > 0 ? "text-orange-500" : "text-blue-500"} leading-none">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</span>` : ''}</div><div class="flex items-baseline gap-1"><div class="text-3xl font-black text-[#1e293b] leading-none">${cur.toLocaleString(undefined,{minimumFractionDigits:1})}</div><div class="text-xs font-bold text-slate-500">Kg</div></div></div></div>`;
             }).join('');
         }
 
         async function submitReport() {
-            var datesToSubmit = Object.keys(state.pendingChanges);
-            if (datesToSubmit.length === 0) return;
-            var btn = document.getElementById('btn-save-report'); 
+            var dates = Object.keys(state.pendingChanges); if (dates.length === 0) return;
+            var btn = document.getElementById('btn-save-report'), curR = String(state.userSetting?.roomId || "").trim(), myB = state.userSetting?.base;
             btn.disabled = true; 
-            var curRoomId = String(state.userSetting?.roomId || "").trim();
-            var myB = state.userSetting?.base;
-            
-            var totalItemsCount = 0;
-            datesToSubmit.forEach(ds => {
-                var pending = state.pendingChanges[ds], reg = state.registeredData[ds]?.[curRoomId]?.cats || {};
-                var changedItems = state.categories
-                    .filter(c => isCategoryAllowed(c, myB))
-                    .filter(c => {
-                        var orig = reg[c.id] || 0;
-                        var val = (pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : orig) + (pending.inputs[c.id] || 0);
-                        return Math.abs(val - orig) >= 0.01;
-                    });
-                totalItemsCount += changedItems.length;
-            });
-
-            var processedItemsCount = 0;
-            for (var idx = 0; idx < datesToSubmit.length; idx++) {
-                var ds = datesToSubmit[idx];
-                var pending = state.pendingChanges[ds], reg = state.registeredData[ds]?.[curRoomId]?.cats || {};
-                
-                var items = state.categories
-                    .filter(c => isCategoryAllowed(c, myB))
-                    .map(c => {
-                        var orig = reg[c.id] || 0, val = (pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : orig) + (pending.inputs[c.id] || 0);
-                        return (Math.abs(val - orig) >= 0.01) ? { categoryId: c.id, categoryName: c.name, value: val.toFixed(1) } : null;
-                    }).filter(x => x !== null);
-
+            for (var d of dates) {
+                var pending = state.pendingChanges[d], reg = state.registeredData[d]?.[curR]?.cats || {};
+                var items = state.categories.filter(c => isCategoryAllowed(c, myB)).map(c => {
+                    var o = reg[c.id] || 0, v = (pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : o) + (pending.inputs[c.id] || 0);
+                    return Math.abs(v - o) >= 0.01 ? { categoryId: c.id, categoryName: c.name, value: v.toFixed(1) } : null;
+                }).filter(x => x !== null);
                 if (items.length > 0) {
-                    processedItemsCount += items.length;
-                    btn.innerHTML = `<i class="fas fa-circle-notch animate-spin mr-2"></i><span>報告中... (廃棄物 ${processedItemsCount}/${totalItemsCount})</span>`;
-                    await new Promise(resolve => {
-                        google.script.run.withSuccessHandler((res) => {
-                            if (!state.registeredData[ds]) state.registeredData[ds] = {};
-                            if (!state.registeredData[ds][curRoomId]) state.registeredData[ds][curRoomId] = { total: 0, cats: {}, logs: [] };
-                            
-                            items.forEach(it => { 
-                                state.registeredData[ds][curRoomId].cats[it.categoryId] = parseFloat(it.value); 
-                                state.registeredData[ds][curRoomId].logs = state.registeredData[ds][curRoomId].logs.filter(l => l.catId !== it.categoryId);
-                                state.registeredData[ds][curRoomId].logs.push({
-                                    catId: it.categoryId,
-                                    catName: it.categoryName,
-                                    val: parseFloat(it.value),
-                                    user: res.user || '自分',
-                                    time: res.time || '今'
-                                });
-                            });
-                            
-                            state.registeredData[ds][curRoomId].total = Object.values(state.registeredData[ds][curRoomId].cats).reduce((a, b) => a + b, 0);
-                            if (ds === state.selectedDate) { inputValues = {}; correctionValues = {}; }
-                            delete state.pendingChanges[ds]; resolve();
-                        }).executeSaveReport({ date: ds, baseName: state.userSetting.base, roomId: curRoomId, items: items });
-                    });
-                } else delete state.pendingChanges[ds];
+                    btn.innerHTML = `<i class="fas fa-circle-notch animate-spin mr-2"></i><span>報告中...</span>`;
+                    await new Promise(res => google.script.run.withSuccessHandler(r => {
+                        if (!state.registeredData[d]) state.registeredData[d] = {}; if (!state.registeredData[d][curR]) state.registeredData[d][curR] = { total: 0, cats: {}, logs: [] };
+                        items.forEach(it => { state.registeredData[d][curR].cats[it.categoryId] = parseFloat(it.value); state.registeredData[d][curR].logs = state.registeredData[d][curR].logs.filter(l => l.catId !== it.categoryId); state.registeredData[d][curR].logs.push({ catId: it.categoryId, catName: it.categoryName, val: parseFloat(it.value), user: r.user || '自分', time: r.time || '今' }); });
+                        state.registeredData[d][curR].total = Object.values(state.registeredData[d][curR].cats).reduce((a, b) => a + b, 0); if (d === state.selectedDate) { inputValues = {}; correctionValues = {}; } delete state.pendingChanges[d]; res();
+                    }).executeSaveReport({ date: d, baseName: state.userSetting.base, roomId: curR, items: items }));
+                } else delete state.pendingChanges[d];
             }
-            showToast("報告が完了しました"); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory();
-            if (!document.getElementById('calendar-expansion').classList.contains('open')) toggleCalendar(true);
-            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane text-blue-200"></i><span>報告する</span>';
+            showToast("報告が完了しました"); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory(); if (!document.getElementById('calendar-expansion').classList.contains('open')) toggleCalendar(true); btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane text-blue-200"></i><span>報告する</span>';
         }
 
         function initSwipeSupport() {
-            var elCal = document.getElementById('calendar-expansion'), elCards = document.getElementById('input-rows-container'), startX = 0, startY = 0;
-            elCal.addEventListener('touchstart', e => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, {passive: true});
-            elCal.addEventListener('touchend', e => { var xDiff = e.changedTouches[0].clientX - startX; if (Math.abs(xDiff) > 50 && Math.abs(xDiff) > Math.abs(e.changedTouches[0].clientY - startY)) animateMonthChange(xDiff > 0 ? -1 : 1); }, {passive: true});
-            elCards.addEventListener('touchstart', e => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, {passive: true});
-            elCards.addEventListener('touchend', e => { var xDiff = e.changedTouches[0].clientX - startX; if (Math.abs(xDiff) > 50 && Math.abs(xDiff) > Math.abs(e.changedTouches[0].clientY - startY)) animateRoomSwitch(xDiff > 0 ? -1 : 1); }, {passive: true});
+            var eC = document.getElementById('calendar-expansion'), eK = document.getElementById('input-rows-container'), sX = 0, sY = 0;
+            eC.addEventListener('touchstart', e => { sX = e.touches[0].clientX; sY = e.touches[0].clientY; }, {passive: true});
+            eC.addEventListener('touchend', e => { var x = e.changedTouches[0].clientX - sX; if (Math.abs(x) > 50 && Math.abs(x) > Math.abs(e.changedTouches[0].clientY - sY)) animateMonthChange(x > 0 ? -1 : 1); }, {passive: true});
+            eK.addEventListener('touchstart', e => { sX = e.touches[0].clientX; sY = e.touches[0].clientY; }, {passive: true});
+            eK.addEventListener('touchend', e => { var x = e.changedTouches[0].clientX - sX; if (Math.abs(x) > 50 && Math.abs(x) > Math.abs(e.changedTouches[0].clientY - sY)) animateRoomSwitch(x > 0 ? -1 : 1); }, {passive: true});
         }
 
         function animateRoomSwitch(dir) {
             if (state.roomsInDept.length <= 1) return;
-            var nextIdx = state.activeRoomIndex + dir;
-            if (nextIdx < 0 || nextIdx >= state.roomsInDept.length) return;
-            var wrapper = document.getElementById('input-rows');
-            wrapper.style.transition = 'transform 0.3s ease-out'; wrapper.style.transform = dir > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+            var nX = state.activeRoomIndex + dir; if (nX < 0 || nX >= state.roomsInDept.length) return;
+            var w = document.getElementById('input-rows'); w.style.transition = 'transform 0.3s ease-out'; w.style.transform = dir > 0 ? 'translateX(-100%)' : 'translateX(100%)';
             setTimeout(() => {
-                state.activeRoomIndex = nextIdx; state.userSetting.roomId = String(state.roomsInDept[nextIdx].id).trim();
-                var cached = state.pendingChanges[state.selectedDate] || { inputs: {}, corrections: {} };
+                state.activeRoomIndex = nX; state.userSetting.roomId = String(state.roomsInDept[nX].id).trim(); var cached = state.pendingChanges[state.selectedDate] || { inputs: {}, corrections: {} };
                 inputValues = Object.assign({}, cached.inputs); correctionValues = Object.assign({}, cached.corrections);
-                renderCategoryCards(); renderCalendar(); renderHistory();
-                wrapper.style.transition = 'none'; wrapper.style.transform = dir > 0 ? 'translateX(100%)' : 'translateX(-100%)';
-                setTimeout(() => { wrapper.style.transition = 'transform 0.3s ease-out'; wrapper.style.transform = 'translateX(0)'; }, 20);
+                renderCategoryCards(); renderCalendar(); renderHistory(); w.style.transition = 'none'; w.style.transform = dir > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+                setTimeout(() => { w.style.transition = 'transform 0.3s ease-out'; w.style.transform = 'translateX(0)'; }, 20);
             }, 300);
         }
 
+        function handleInputFocus(el) { if (el) setTimeout(() => el.focus(), 350); }
         function updateDateDisplay() { if (state.selectedDate) { var pts = state.selectedDate.split("-"); if (pts.length === 3) document.getElementById('display-date').innerText = parseInt(pts[1]) + "月" + parseInt(pts[2]) + "日"; } }
     </script>
 </body>
