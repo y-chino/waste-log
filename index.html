@@ -20,20 +20,7 @@
         
         .lock-scroll { overflow: hidden !important; height: 100vh !important; }
 
-        .loading-overlay { 
-            background: #ffffff; 
-            z-index: 9000; 
-            position: absolute; 
-            top: 88px; 
-            bottom: 0;
-            left: 0;
-            right: 0;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 1rem; 
-        }
+        .loading-overlay { background: #ffffff; z-index: 9000; position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
         
         #slider-backdrop {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -105,8 +92,9 @@
         .val-input:focus { border-bottom-color: #0f172a; }
         .val-input:disabled { color: #94a3b8; border-bottom-style: dashed; opacity: 0.6; background-color: transparent !important; }
 
+        /* カレンダー数値のスタイル: 垂直整列を考慮しマージンをリセット */
         .calendar-val { font-size: 9px; line-height: 1; font-weight: 900; color: #1e293b; margin-top: 1px; }
-        .calendar-val-pending { font-size: 9px; line-height: 1; font-weight: 900; margin-top: -2px; }
+        .calendar-val-pending { font-size: 9px; line-height: 1; font-weight: 900; margin-top: 1px; }
         .text-pending-plus { color: #f59e0b; }
         .text-pending-minus { color: #2563eb; }
 
@@ -174,22 +162,72 @@
             border-bottom-color: #e2e8f0;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-        
-        /* 通信中のグレーアウト用スタイル */
-        .ui-disabled {
-            opacity: 0.5;
-            pointer-events: none !important;
-            user-select: none;
-            transition: all 0.3s ease;
-        }
     </style>
 </head>
 <body id="app-body" class="bg-slate-50 min-h-screen">
 
+    <div id="loader" class="loading-overlay">
+        <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+        <span class="text-slate-500 font-bold text-sm tracking-widest animate-pulse">読み込み中...</span>
+    </div>
+
     <div id="slider-backdrop"></div>
 
-    <!-- アプリ共通ヘッダー -->
-    <div id="app-content" class="max-w-md mx-auto flex flex-col min-h-screen bg-white relative shadow-2xl border-x border-slate-100">
+    <div id="slider-panel" class="fixed bottom-0 left-0 right-0 p-6 pt-4 bg-white border-t border-slate-200 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[2.5rem]">
+        <div class="max-w-md mx-auto flex flex-col gap-5">
+            <div class="flex flex-col gap-3">
+                <div class="relative w-full px-1">
+                    <button id="btn-close-slider" class="absolute -top-1 -right-1 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-transform z-10">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                    <div class="flex flex-col gap-1.5 w-full">
+                        <div class="flex items-center gap-2 flex-wrap pr-10">
+                            <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
+                            <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
+                        </div>
+                        <div id="slider-cat-detail" class="hidden mt-4 w-full py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] leading-relaxed shadow-inner"></div>
+                        <div class="flex items-center gap-1.5 text-slate-500 mt-1">
+                            <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
+                            <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
+                        </div>
+                        <div id="edit-lock-container" class="flex items-center gap-2 mt-1.5">
+                            <label class="switch">
+                                <input type="checkbox" id="edit-lock-toggle" onchange="toggleEditLock(this.checked)">
+                                <span class="slider-switch"></span>
+                            </label>
+                            <span id="edit-lock-label" class="text-sm font-bold text-slate-600">既登録分を修正する</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col items-center py-2">
+                <div class="flex items-end gap-3">
+                    <div class="flex flex-col items-center">
+                        <span id="label-registered" class="text-sm font-bold text-slate-400 mb-1 uppercase tracking-tight">登録済</span>
+                        <input type="number" id="registered-val-field" step="0.1" inputmode="decimal" class="val-input !border-slate-200" oninput="onRegisteredValChange(this.value)">
+                    </div>
+                    <span class="text-2xl font-black text-slate-300 mb-3">+</span>
+                    <div class="flex flex-col items-center">
+                        <span id="label-manual" class="text-sm font-bold text-emerald-600 mb-1 uppercase tracking-tight">今回分</span>
+                        <input type="number" id="manual-input-field" step="0.1" inputmode="decimal" class="val-input !text-slate-900 !border-slate-900" placeholder="0.0" onfocus="handleInputFocus(this)" oninput="onManualInput(this.value)">
+                    </div>
+                    <span class="text-lg font-bold text-slate-500 mb-3">Kg</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+                <button data-val="5" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+5</button>
+                <button data-val="10" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+10</button>
+                <button data-val="15" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+15</button>
+                <button data-val="20" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+20</button>
+            </div>
+            <div class="px-1 py-1.5">
+                <input type="range" id="input-slider" min="0" max="100" step="0.1" value="0" oninput="onSliderInput(this.value)">
+            </div>
+            <button id="btn-confirm-slider" class="btn-action font-bold" disabled onclick="closeSlider()">計量</button>
+        </div>
+    </div>
+
+    <div id="app-content" class="max-w-md mx-auto flex flex-col min-h-screen bg-white relative shadow-2xl border-x border-slate-100 hidden">
         <header class="px-5 py-4 flex justify-between items-center h-[88px] z-[1000] bg-white border-b border-slate-50 gap-2">
             <div class="flex items-center gap-3 flex-shrink-0">
                 <div id="app-icon-trigger" class="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-sm cursor-pointer select-none active:scale-95 transition-transform flex-shrink-0">
@@ -210,284 +248,194 @@
             </div>
         </header>
 
-        <!-- 初期ローディング画面 -->
-        <div id="loader" class="loading-overlay">
-            <div class="w-16 h-16 border-[6px] border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
-            <span class="text-2xl font-black text-slate-700 tracking-widest uppercase mt-4">読み込み中...</span>
-        </div>
-
-        <!-- メインコンテンツ -->
-        <div id="main-content-area" class="hidden flex-1 flex flex-col relative">
-            <div id="sticky-bar-container" class="px-4 pb-0 bg-white z-[950] relative">
-                
-                <div id="sticky-calendar-bar" class="hidden relative">
-                    <!-- 通信中ローディング用オーバーレイ -->
-                    <div id="calendar-lock-overlay" class="absolute inset-0 bg-slate-500/50 z-[2000] hidden flex-col items-center justify-center cursor-not-allowed rounded-2xl" style="pointer-events: auto;">
-                        <div class="flex flex-col items-center gap-3">
-                            <div class="w-12 h-12 border-[5px] border-white/30 border-t-white rounded-full animate-spin"></div>
-                            <span class="text-lg font-black text-white tracking-widest uppercase drop-shadow-md">データ取得中</span>
-                        </div>
+        <div id="sticky-bar-container" class="px-4 pb-0 bg-white z-[950]">
+            <div id="sticky-calendar-bar" class="hidden">
+                <div id="calendar-bar-container" class="relative w-full app-card h-[52px] flex items-center bg-slate-100 border-none shadow-none">
+                    <div class="absolute left-4 z-30">
+                        <button id="btn-select-today" class="today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform">今日を選択</button>
                     </div>
-
-                    <!-- 初期設定未完了用 完全ロックオーバーレイ -->
-                    <div id="calendar-unregistered-overlay" class="absolute inset-0 bg-slate-200/70 z-[1900] hidden cursor-not-allowed rounded-2xl" style="pointer-events: auto;"></div>
-
-                    <div id="calendar-bar-container" class="relative w-full app-card h-[52px] flex items-center bg-slate-100 border-none shadow-none">
-                        <div class="absolute left-4 z-30">
-                            <button id="btn-select-today" class="today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform">今日を選択</button>
-                        </div>
-                        <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 whitespace-nowrap z-10 pointer-events-none">
-                            <i class="fas fa-calendar-day text-slate-500 text-base"></i>
-                            <div id="display-date" class="text-xl font-black text-[#1e293b]">---</div>
-                        </div>
-                        <div id="calendar-toggle-group" class="group flex-1 h-full flex items-center justify-end px-4 cursor-pointer active:bg-slate-200/50 transition-all z-20">
-                            <div class="w-8 h-8 flex items-center justify-center">
-                                <div id="cal-toggle-icon-container" class="flex items-center justify-center w-8 h-8 bg-emerald-50 rounded-lg text-emerald-900 group-active:bg-emerald-600 group-active:text-white transition-all shadow-sm">
-                                    <i id="cal-toggle-icon" class="fas fa-chevron-up text-sm transition-transform duration-300"></i>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 whitespace-nowrap z-10 pointer-events-none">
+                        <i class="fas fa-calendar-day text-slate-500 text-base"></i>
+                        <div id="display-date" class="text-xl font-black text-[#1e293b]">---</div>
                     </div>
-                    <div id="calendar-expansion" class="bg-white rounded-b-2xl px-1 pt-1 pb-0 open touch-pan-y slide-container relative">
-                        <div id="calendar-slide-wrapper" class="slide-content">
-                            <div class="grid grid-cols-7 mb-1 mt-0 items-center">
-                                <div class="flex justify-center">
-                                    <button id="btn-prev-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-left text-xs"></i></button>
-                                </div>
-                                <h3 id="calendar-title" class="text-base font-black text-[#1e293b] tracking-tight col-span-5 text-center">---</h3>
-                                <div class="flex justify-center">
-                                    <button id="btn-next-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-right text-xs"></i></button>
-                                </div>
+                    <div id="calendar-toggle-group" class="group flex-1 h-full flex items-center justify-end px-4 cursor-pointer active:bg-slate-200/50 transition-all z-20">
+                        <div class="w-8 h-8 flex items-center justify-center">
+                            <div id="cal-toggle-icon-container" class="flex items-center justify-center w-8 h-8 bg-emerald-50 rounded-lg text-emerald-900 group-active:bg-emerald-600 group-active:text-white transition-all shadow-sm">
+                                <i id="cal-toggle-icon" class="fas fa-chevron-up text-sm transition-transform duration-300"></i>
                             </div>
-                            <div class="grid grid-cols-7 gap-px text-center font-bold text-[11px] mb-1 uppercase text-[#334155] tracking-widest">
-                                <span class="text-sunday">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="text-saturday">土</span>
-                            </div>
-                            <div id="calendar-grid" class="grid grid-cols-7 gap-px"></div>
                         </div>
                     </div>
                 </div>
+                <div id="calendar-expansion" class="bg-white rounded-b-2xl px-1 pt-1 pb-0 open touch-pan-y slide-container">
+                    <div id="calendar-slide-wrapper" class="slide-content">
+                        <div class="grid grid-cols-7 mb-1 mt-0 items-center">
+                            <div class="flex justify-center">
+                                <button id="btn-prev-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-left text-xs"></i></button>
+                            </div>
+                            <h3 id="calendar-title" class="text-base font-black text-[#1e293b] tracking-tight col-span-5 text-center">---</h3>
+                            <div class="flex justify-center">
+                                <button id="btn-next-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-right text-xs"></i></button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-px text-center font-bold text-[11px] mb-1 uppercase text-[#334155] tracking-widest">
+                            <span class="text-sunday">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="text-saturday">土</span>
+                        </div>
+                        <div id="calendar-grid" class="grid grid-cols-7 gap-px"></div>
+                    </div>
+                </div>
+            </div>
 
-                <div id="view-main-sticky" class="hidden">
-                    <div id="room-nav-label" class="px-1 flex items-center justify-between">
+            <div id="view-main-sticky" class="hidden">
+                <div id="room-nav-label" class="px-1 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
                         <div class="flex items-center gap-2">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-door-open text-base text-emerald-600"></i>
-                                <span id="current-room-display-name" class="text-lg font-black text-[#1e293b]">場所：---</span>
-                            </div>
-                        </div>
-                        <div id="room-dots-container" class="flex items-center gap-1.5"></div>
-                    </div>
-                </div>
-                
-                <div id="sticky-registration-bar" class="hidden relative">
-                    <div class="app-card h-[52px] flex items-center justify-center bg-slate-100 shadow-none border-none relative overflow-hidden">
-                        <div class="flex items-center justify-center w-full gap-3">
-                            <i class="fas fa-user-gear text-slate-500 text-base"></i>
-                            <h2 class="text-xl font-black text-[#1e293b]">デフォルト設定</h2>
-                        </div>
-                    </div>
-                </div>
-                <div id="sticky-description-bar" class="hidden text-center">
-                    <div class="app-card h-[52px] relative flex items-center justify-center bg-slate-100 shadow-none border-none">
-                        <div class="flex items-center">
-                            <i class="fas fa-info-circle text-slate-500 text-base mr-3"></i>
-                            <h2 class="text-lg font-black text-[#1e293b]">アプリ説明</h2>
-                        </div>
-                        <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.5</span>
-                    </div>
-                </div>
-                <div id="calendar-separator" class="hidden h-px bg-slate-200 w-full mt-1"></div>
-            </div>
-
-            <main class="flex-1 px-4 relative flex flex-col">
-                <div id="view-main" class="hidden flex flex-col pb-48">
-                    <div id="scroll-area">
-                        <div id="input-rows-container" class="touch-pan-y slide-container">
-                            <div id="input-rows" class="grid grid-cols-2 gap-3 slide-content"></div>
-                        </div>
-                        <!-- 履歴コンテナ -->
-                        <div id="history-container" class="mt-8 mb-4 flex flex-col items-center hidden">
-                            <button id="btn-toggle-history" class="text-slate-400 font-bold text-sm flex items-center gap-2 py-2 px-4 rounded-full border border-slate-200 bg-white active:bg-slate-50 transition-colors shadow-sm" onclick="toggleHistory()">
-                                <i id="history-icon" class="fas fa-chevron-down text-[10px]"></i>
-                                <span>履歴を表示する</span>
-                            </button>
-                            <div id="history-expansion" class="w-full">
-                                <div class="app-card p-4 border-2 border-slate-200 bg-slate-50/50">
-                                    <div id="history-list" class="space-y-4"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="view-registration" class="hidden flex flex-col flex-1 pb-8 text-center">
-                    <div class="flex-1 flex flex-col">
-                        <div class="py-2 px-1 flex flex-col items-center">
-                            <span id="display-user-email" class="text-base font-bold text-slate-500 tracking-wide">---</span>
-                        </div>
-                        <div class="border-b border-slate-200"></div>
-                        <div class="mt-4 space-y-3 mb-4">
-                            <div class="app-card p-4 border-2 border-slate-200 relative overflow-hidden">
-                                <div class="relative flex items-center justify-center mb-4 min-h-[28px]">
-                                    <span id="lock-badge" class="absolute left-0 px-2 py-1 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent">LOCKED</span>
-                                    <span class="relative flex items-center">
-                                        <i class="fas fa-map-marker-alt text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
-                                        <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">01. 拠点</label>
-                                    </span>
-                                </div>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <button id="base-KP" onclick="regSelectBase('KP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>KP</span></button>
-                                    <button id="base-HP" onclick="regSelectBase('HP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>HP</span></button>
-                                    <button id="base-FP" onclick="regSelectBase('FP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>FP</span></button>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="app-card p-4 border-2 border-slate-200">
-                                    <div class="flex justify-center items-center mb-4">
-                                        <span class="relative flex items-center">
-                                            <i class="fas fa-building text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
-                                            <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">02. 所属/建屋</label>
-                                        </span>
-                                    </div>
-                                    <select id="reg-dept-select" onchange="onRegDeptChange()" disabled class="w-full h-12 px-2 rounded-lg bg-slate-50 border border-slate-200 font-bold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"></select>
-                                </div>
-                                <div class="app-card p-4 border-2 border-slate-200">
-                                    <div class="flex justify-center items-center mb-4">
-                                        <span class="relative flex items-center">
-                                            <i class="fas fa-door-open text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
-                                            <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">03. 場所</label>
-                                        </span>
-                                    </div>
-                                    <select id="reg-room-select" onchange="onRegRoomChange()" disabled class="w-full h-12 px-2 rounded-lg bg-slate-50 border border-slate-200 font-bold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"></select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="border-t border-slate-200 pt-4 flex flex-col gap-4 mt-auto">
-                        <div id="reg-footer-actions"></div>
-                        <button id="btn-reg-back" class="w-full h-14 bg-slate-100 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed active:scale-95 active:bg-slate-200 transition-all">
-                            <i class="fas fa-arrow-left"></i>戻る
-                        </button>
-                    </div>
-                </div>
-
-                <div id="view-description" class="hidden flex flex-col flex-1 pb-8 text-center">
-                    <div class="flex-1 flex flex-col space-y-1.5">
-                        <div class="app-card p-4 px-1 border-orange-200 bg-orange-50 mt-4 mx-1">
-                            <p class="text-sm text-slate-800 leading-relaxed font-bold text-center tracking-tighter">
-                                廃棄物排出量を現場で即座に記録するためのツールです。<br>正確なデータ蓄積により環境負荷低減を支援します。
-                            </p>
-                        </div>
-                        <div class="space-y-1 px-2 text-left">
-                            <div class="flex items-start gap-4 p-2">
-                                <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">1</div>
-                                <div class="flex-1 pt-1">
-                                    <p class="font-bold text-slate-800弘 leading-none mb-1 text-sm">日付を選択</p>
-                                    <p class="text-[11px] text-slate-500 text-justify">カレンダーの日付をタップすると閉じ、計量を開始できます。カレンダー部分は左右のフリックで月移動が可能です。</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-4 p-2">
-                                <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">2</div>
-                                <div class="flex-1 pt-1">
-                                    <p class="font-bold text-slate-800 leading-none mb-1 text-sm">廃棄物の種別をタップして計量</p>
-                                    <p class="text-[11px] text-slate-500 text-justify">廃棄物の種別を選択して数量を計量します。スライダー等で素早く計量が可能です。同じ所属内であれば、左右のフリックで場所を切り替えられます。</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-4 p-2">
-                                <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">3</div>
-                                <div class="flex-1 pt-1">
-                                    <p class="font-bold text-slate-800 leading-none mb-1 text-sm">まとめて報告</p>
-                                    <p class="text-[11px] text-slate-500 text-justify">計量後は下部の「報告する」ボタンを押し、一括送信します。</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="border-t border-slate-200 pt-4 flex flex-col gap-4 mt-auto">
-                        <button id="btn-feedback" class="btn-action btn-dark text-white font-bold" onclick="openFeedbackForm()">
-                            <i class="fas fa-comment-dots mr-2"></i>フィードバックを送る
-                        </button>
-                        <button id="btn-back-description" class="w-full h-14 bg-slate-100 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 active:bg-slate-200 transition-all">
-                            <i class="fas fa-arrow-left"></i>戻る
-                        </button>
-                    </div>
-                </div>
-            </main>
-
-            <footer id="footer-actions" class="fixed bottom-0 left-0 right-0 p-5 bg-white/95 backdrop-blur-md border-t border-slate-100 z-[1500]" style="display:none;">
-                <div class="max-w-md mx-auto flex gap-3">
-                    <button id="btn-clear-changes" class="btn-clear-sub"><i class="fas fa-eraser"></i></button>
-                    <button id="btn-save-report" class="flex-1 btn-action btn-report font-bold">
-                        <i class="fas fa-paper-plane text-blue-200"></i><span>報告する</span>
-                    </button>
-                </div>
-            </footer>
-        </div>
-    </div>
-
-    <!-- 数量パネル -->
-    <div id="slider-panel" class="fixed bottom-0 left-0 right-0 p-6 pt-4 bg-white border-t border-slate-200 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[2.5rem] z-[8000]">
-        <div class="max-w-md mx-auto flex flex-col gap-2">
-            <div class="flex flex-col gap-3">
-                <div class="relative w-full px-1">
-                    <button id="btn-close-slider" class="absolute -top-1 -right-1 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-transform z-10">
-                        <i class="fas fa-times text-lg"></i>
-                    </button>
-                    <div class="flex flex-col gap-1.5 w-full">
-                        <div class="flex items-center gap-2 flex-wrap pr-10">
-                            <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
-                            <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
-                        </div>
-                        <div id="slider-cat-detail" class="hidden mt-4 w-full py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] leading-relaxed shadow-inner"></div>
-                        <div class="flex items-center gap-1.5 text-slate-500 mt-1">
                             <i class="fas fa-door-open text-base text-emerald-600"></i>
-                            <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
+                            <span id="current-room-display-name" class="text-lg font-black text-[#1e293b]">場所：---</span>
+                        </div>
+                    </div>
+                    <div id="room-dots-container" class="flex items-center gap-1.5"></div>
+                </div>
+            </div>
+            
+            <div id="sticky-registration-bar" class="hidden relative">
+                <div class="app-card h-[52px] flex items-center justify-center bg-slate-100 shadow-none border-none relative overflow-hidden">
+                    <div class="flex items-center justify-center w-full gap-3">
+                        <i class="fas fa-user-gear text-slate-500 text-base"></i>
+                        <h2 class="text-xl font-black text-[#1e293b]">デフォルト設定</h2>
+                    </div>
+                </div>
+            </div>
+            <div id="sticky-description-bar" class="hidden text-center">
+                <div class="app-card h-[52px] relative flex items-center justify-center bg-slate-100 shadow-none border-none">
+                    <div class="flex items-center">
+                        <i class="fas fa-info-circle text-slate-500 text-base mr-3"></i>
+                        <h2 class="text-lg font-black text-[#1e293b]">アプリ説明</h2>
+                    </div>
+                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.5</span>
+                </div>
+            </div>
+            <div id="calendar-separator" class="hidden h-px bg-slate-200 w-full mt-1"></div>
+        </div>
+
+        <main class="flex-1 px-4 relative">
+            <div id="view-main" class="hidden flex flex-col pb-48">
+                <div id="scroll-area">
+                    <div id="input-rows-container" class="touch-pan-y slide-container">
+                        <div id="input-rows" class="grid grid-cols-2 gap-3 slide-content"></div>
+                    </div>
+                    <div class="mt-8 mb-4 flex flex-col items-center">
+                        <button id="btn-toggle-history" class="text-slate-400 font-bold text-sm flex items-center gap-2 py-2 px-4 rounded-full border border-slate-200 bg-white active:bg-slate-50 transition-colors shadow-sm" onclick="toggleHistory()">
+                            <i id="history-icon" class="fas fa-chevron-down text-[10px]"></i>
+                            <span>履歴を表示する</span>
+                        </button>
+                        <div id="history-expansion" class="w-full">
+                            <div class="app-card p-4 border-2 border-slate-200 bg-slate-50/50">
+                                <div id="history-list" class="space-y-4"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 数値登録UI -->
-            <div class="flex items-center justify-center py-2">
-                <div class="flex items-end gap-2">
-                    <div id="edit-lock-container" class="flex flex-col items-center mb-1">
-                        <label class="switch scale-75">
-                            <input type="checkbox" id="edit-lock-toggle" onchange="toggleEditLock(this.checked)">
-                            <span class="slider-switch"></span>
-                        </label>
-                        <span class="text-[11px] font-bold text-slate-400">修正</span>
+            <div id="view-registration" class="hidden h-full pb-32 text-center">
+                <div class="py-2 px-1 flex flex-col items-center">
+                    <span id="display-user-email" class="text-base font-bold text-slate-500 tracking-wide">---</span>
+                </div>
+                <div class="border-b border-slate-200"></div>
+                <div class="mt-4 space-y-3 mb-4">
+                    <div class="app-card p-4 border-2 border-slate-200 relative overflow-hidden">
+                        <div class="relative flex items-center justify-center mb-4 min-h-[28px]">
+                            <span id="lock-badge" class="absolute left-0 px-2 py-1 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent">LOCKED</span>
+                            <span class="relative flex items-center">
+                                <i class="fas fa-map-marker-alt text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
+                                <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">01. 拠点</label>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button id="base-KP" onclick="regSelectBase('KP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>KP</span></button>
+                            <button id="base-HP" onclick="regSelectBase('HP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>HP</span></button>
+                            <button id="base-FP" onclick="regSelectBase('FP')" class="btn-base-select h-12 rounded-xl font-black text-xl flex items-center justify-center transition-all border-none"><span>FP</span></button>
+                        </div>
                     </div>
-
-                    <div class="flex flex-col items-center">
-                        <span id="label-registered" class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-tight">登録済</span>
-                        <input type="number" id="registered-val-field" step="0.1" inputmode="decimal" class="val-input !border-slate-200" oninput="onRegisteredValChange(this.value)">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="app-card p-4 border-2 border-slate-200">
+                            <div class="flex justify-center items-center mb-4">
+                                <span class="relative flex items-center">
+                                    <i class="fas fa-building text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
+                                    <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">02. 所属/建屋</label>
+                                </span>
+                            </div>
+                            <select id="reg-dept-select" onchange="onRegDeptChange()" disabled class="w-full h-12 px-2 rounded-lg bg-slate-50 border border-slate-200 font-bold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"></select>
+                        </div>
+                        <div class="app-card p-4 border-2 border-slate-200">
+                            <div class="flex justify-center items-center mb-4">
+                                <span class="relative flex items-center">
+                                    <i class="fas fa-door-open text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
+                                    <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">03. 場所</label>
+                                </span>
+                            </div>
+                            <select id="reg-room-select" onchange="onRegRoomChange()" disabled class="w-full h-12 px-2 rounded-lg bg-slate-50 border border-slate-200 font-bold text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"></select>
+                        </div>
                     </div>
-
-                    <div class="flex items-center h-[2.5rem] mb-1">
-                        <span class="text-2xl font-black text-slate-300">+</span>
-                    </div>
-
-                    <div class="flex flex-col items-center">
-                        <span id="label-manual" class="text-[10px] font-bold text-emerald-600 mb-1 uppercase tracking-tight">今回分</span>
-                        <input type="number" id="manual-input-field" step="0.1" inputmode="decimal" class="val-input !text-slate-900 !border-slate-900" placeholder="0.0" onfocus="handleInputFocus(this)" oninput="onManualInput(this.value)">
-                    </div>
-
-                    <div class="flex items-center h-[2.5rem] mb-1">
-                        <span class="text-lg font-bold text-slate-500">Kg</span>
-                    </div>
+                </div>
+                <div class="border-t border-slate-200 pt-4 flex flex-col gap-4">
+                    <div id="reg-footer-actions"></div>
+                    <button id="btn-reg-back" class="w-full h-14 bg-slate-100 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 disabled:grayscale transition-all">
+                        <i class="fas fa-arrow-left"></i>戻る
+                    </button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-4 gap-2">
-                <button data-val="5" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+5</button>
-                <button data-val="10" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+10</button>
-                <button data-val="15" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-all">+15</button>
-                <button data-val="20" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-all">+20</button>
+            <div id="view-description" class="hidden h-full pb-32 text-center">
+                <div class="space-y-1.5">
+                    <div class="app-card p-4 px-1 border-orange-200 bg-orange-50 mt-4 mx-1">
+                        <p class="text-sm text-slate-800 leading-relaxed font-bold text-center tracking-tighter">
+                            廃棄物排出量を現場で即座に記録するためのツールです。<br>正確なデータ蓄積により環境負荷低減を支援します。
+                        </p>
+                    </div>
+                    <div class="space-y-1 px-2 text-left">
+                        <div class="flex items-start gap-4 p-2">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">1</div>
+                            <div class="flex-1 pt-1">
+                                <p class="font-bold text-slate-800弘 leading-none mb-1 text-sm">日付を選択</p>
+                                <p class="text-[11px] text-slate-500 text-justify">カレンダーの日付をタップすると閉じ、計量を開始できます。カレンダー部分は左右のフリックで月移動が可能です。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-2">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">2</div>
+                            <div class="flex-1 pt-1">
+                                <p class="font-bold text-slate-800 leading-none mb-1 text-sm">廃棄物の種別をタップして計量</p>
+                                <p class="text-[11px] text-slate-500 text-justify">廃棄物の種別を選択して数量を計量します。スライダー等で素早く計量が可能です。同じ所属内であれば、左右のフリックで場所を切り替えられます。</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-2">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">3</div>
+                            <div class="flex-1 pt-1">
+                                <p class="font-bold text-slate-800 leading-none mb-1 text-sm">まとめて報告</p>
+                                <p class="text-[11px] text-slate-500 text-justify">計量後は下部の「報告する」ボタンを押し、一括送信します。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-2 flex flex-col gap-3">
+                        <button id="btn-feedback" class="w-full h-14 bg-slate-800 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform" onclick="openFeedbackForm()">
+                            <i class="fas fa-comment-dots"></i>フィードバックを送る
+                        </button>
+                        <button id="btn-back-description" class="w-full h-14 bg-slate-100 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2">
+                            <i class="fas fa-arrow-left"></i>戻る
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="px-1 py-1.5">
-                <input type="range" id="input-slider" min="0" max="100" step="0.1" value="0" oninput="onSliderInput(this.value)">
+        </main>
+
+        <footer id="footer-actions" class="fixed bottom-0 left-0 right-0 p-5 bg-white/95 backdrop-blur-md border-t border-slate-100 z-[1500]" style="display:none;">
+            <div class="max-w-md mx-auto flex gap-3">
+                <button id="btn-clear-changes" class="btn-clear-sub"><i class="fas fa-eraser"></i></button>
+                <button id="btn-save-report" class="flex-1 btn-action btn-report font-bold">
+                    <i class="fas fa-paper-plane text-blue-200"></i><span>報告する</span>
+                </button>
             </div>
-            <button id="btn-confirm-slider" class="btn-action font-bold" disabled onclick="closeSlider()">計量</button>
-        </div>
+        </footer>
     </div>
 
     <div id="toast" onclick="hideToast()">
@@ -501,23 +449,12 @@
         if (typeof google === 'undefined') { 
             window.google = { script: { run: { 
                 withSuccessHandler: function(cb) { this._s = cb; return this; }, 
-                withFailureHandler: function(cb) { this._f = cb; return this; },
                 registerUserSetting: function() { setTimeout(() => { if(this._s) this._s({success:true}); }, 500); }, 
-                executeSaveReport: function() { setTimeout(() => { if(this._s) this._s({success:true, user: 'demo@example.com', time: '2024/02/20 10:00:00'}); }, 500); },
-                getMonthlyData: function(y, m) { 
-                    setTimeout(() => { 
-                        if(this._s) {
-                            const mockData = {};
-                            const ds = `${y}-${String(m).padStart(2,'0')}-15`;
-                            mockData[ds] = { "1": { total: 45.0, cats: {"1": 25.0, "2": 20.0}, logs: [{catId: "1", catName: "普通ごみ", val: 25.0, user: "demo@mipox", time: "10:00"}] } };
-                            this._s(mockData); 
-                        }
-                    }, 3000); 
-                }
+                executeSaveReport: function() { setTimeout(() => { if(this._s) this._s({success:true, user: 'demo@example.com', time: '2024/02/20 10:00:00'}); }, 500); } 
             } } }; 
         }
 
-        var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "", loadedMonths: [] };
+        var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "" };
         var inputValues = {}; var correctionValues = {};
         var calendarViewDate = new Date(); var activeSliderCatId = null;
         var iconTimer = null; 
@@ -543,67 +480,25 @@
                 Object.assign(state, decoded); 
                 state.serverTime = decoded.serverTime || Date.now(); 
                 calendarViewDate = new Date(state.serverTime);
-                
-                var now = new Date(state.serverTime);
-                for(var i=0; i<3; i++) {
-                    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                    state.loadedMonths.push(d.getFullYear() + "-" + (d.getMonth() + 1));
+                setToday(false);
+                if (state.userExists && state.userSetting?.roomId) {
+                    state.isRegLocked = true;
+                    initRoomNavigation();
+                    showMainView();
+                } else {
+                    state.isRegLocked = false;
+                    showMainView();
+                    showToast("初期設定を行ってください", "info");
                 }
-                
-                setLoadingUi(true);
-
-                setToday(false, true); 
-                state.isRegLocked = (state.userExists && state.userSetting?.roomId);
-                initRoomNavigation();
-                showMainView(); 
-
                 document.getElementById('display-user-email').innerText = userEmail;
                 document.getElementById('global-user-avatar').src = "https://ui-avatars.com/api/?background=2563eb&color=fff&bold=true&name=" + encodeURIComponent(userEmail);
-                
-                setTimeout(() => { 
-                    setLoadingUi(false);
-                    document.getElementById('main-content-area').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('loader').style.display = 'none'; 
+                    document.getElementById('app-content').classList.remove('hidden');
                 }, 100);
-
-                initEventListeners(); initSwipeSupport();
+                initEventListeners();
+                initSwipeSupport();
             } catch (e) { document.getElementById('loader').style.display = 'none'; }
-        }
-
-        function updateUnregisteredOverlay() {
-            const overlay = document.getElementById('calendar-unregistered-overlay');
-            if (overlay) {
-                if (!state.userExists || !state.userSetting?.roomId) {
-                    overlay.classList.remove('hidden');
-                    overlay.style.display = 'block';
-                } else {
-                    overlay.classList.add('hidden');
-                    overlay.style.display = 'none';
-                }
-            }
-        }
-
-        function setLoadingUi(isLoading) {
-            const loader = document.getElementById('loader');
-            const overlay = document.getElementById('calendar-lock-overlay');
-            if (isLoading) {
-                if(loader) loader.style.display = 'flex';
-                if(overlay) { overlay.classList.remove('hidden'); overlay.style.display = 'flex'; }
-            } else {
-                if(loader) loader.style.display = 'none';
-                if(overlay) { overlay.style.display = 'none'; overlay.classList.add('hidden'); }
-            }
-        }
-
-        function isAppLoading() {
-            const loader = document.getElementById('loader');
-            const overlay = document.getElementById('calendar-lock-overlay');
-            return (loader && loader.style.display !== 'none') || 
-                   (overlay && overlay.style.display !== 'none');
-        }
-
-        function openFeedbackForm() {
-            if (state.feedbackUrl) { window.open(state.feedbackUrl, '_blank'); } 
-            else { showToast("フィードバック用URLが設定されていません", "warning"); }
         }
 
         function isCategoryAllowed(cat, base) {
@@ -618,33 +513,38 @@
             const el = document.getElementById(`tooltip-${id}`);
             if (!el) return;
             document.querySelectorAll('[id^="tooltip-"]').forEach(t => {
-                if (t.id !== `tooltip-${id}`) { t.classList.add('invisible', 'opacity-0'); t.classList.remove('visible', 'opacity-100'); }
+                if (t.id !== `tooltip-${id}`) {
+                    t.classList.add('invisible', 'opacity-0'); t.classList.remove('visible', 'opacity-100');
+                }
             });
-            el.classList.remove('invisible', 'opacity-0'); el.classList.add('visible', 'opacity-100');
+            el.classList.remove('invisible', 'opacity-0');
+            el.classList.add('visible', 'opacity-100');
             if (tooltipTimers[id]) clearTimeout(tooltipTimers[id]);
-            tooltipTimers[id] = setTimeout(() => { el.classList.add('invisible', 'opacity-0'); el.classList.remove('visible', 'opacity-100'); }, 3000);
+            tooltipTimers[id] = setTimeout(() => {
+                el.classList.add('invisible', 'opacity-0'); el.classList.remove('visible', 'opacity-100');
+            }, 3000);
         }
 
         function getDemoData() {
             return {
                 userExists: false,
-                userSetting: null,
                 locations: [
                     { id: "1", name: "CR1", dept: "B01", base: "HP" },
+                    { id: "1-2", name: "CR2", dept: "B01", base: "HP" },
                     { id: "2", name: "検査室", dept: "B04", base: "HP" },
+                    { id: "28", name: "事務所", dept: "11B", base: "KP" },
+                    { id: "kp-1-2", name: "プレス1号機", dept: "11B", base: "KP" },
                     { id: "13", name: "防水エリア", dept: "製造一課", base: "FP" },
-                    { id: "18", name: "プレス1号機", dept: "11B", base: "KP" }
+                    { id: "14", name: "調合エリア", dept: "製造一課", base: "FP" }
                 ],
                 categories: [
-                    { id: "1", name: "普通ごみ", targetBase: "HP", detail: "一般ごみ、生活ゴミ" },
-                    { id: "2", name: "木くず", targetBase: "HP", detail: "木パレット、端材" },
-                    { id: "4", name: "紙屑", targetBase: "HP", detail: "コピー用紙、雑誌、段ボール" },
-                    { id: "13", name: "廃液", targetBase: "FP", detail: "製造工程での廃液" },
+                    { id: "1", name: "普通ごみ", targetBase: "HP", detail: "一般ごみ" },
+                    { id: "2", name: "木くず", targetBase: "HP", detail: "木屑" },
+                    { id: "13", name: "廃液", targetBase: "FP", detail: "製造廃液" },
                     { id: "18", name: "可燃ごみ", targetBase: "KP", detail: "可燃ごみ全般" }
                 ],
                 feedbackUrl: "",
-                registeredData: {}, 
-                serverTime: Date.now()
+                registeredData: {}, serverTime: Date.now()
             };
         }
 
@@ -659,32 +559,43 @@
 
         function initEventListeners() {
             var trigger = document.getElementById('app-icon-trigger');
-            var startHandler = function(e) { if (activeSliderCatId) return; iconTimer = setTimeout(() => { iconTimer = null; if (checkUnsavedChanges()) showRegistrationView(); }, 600); };
-            var endHandler = function(e) { if (activeSliderCatId) return; if (iconTimer) { clearTimeout(iconTimer); iconTimer = null; if (checkUnsavedChanges()) showDescriptionView(); } };
+            var startHandler = function(e) { 
+                if (activeSliderCatId) return;
+                iconTimer = setTimeout(() => { iconTimer = null; if (checkUnsavedChanges()) showRegistrationView(); }, 600); 
+            };
+            var endHandler = function(e) { 
+                if (activeSliderCatId) return;
+                if (iconTimer) { clearTimeout(iconTimer); iconTimer = null; if (checkUnsavedChanges()) showDescriptionView(); } 
+            };
             trigger.addEventListener('mousedown', startHandler); trigger.addEventListener('mouseup', endHandler);
             trigger.addEventListener('touchstart', startHandler, {passive: true}); trigger.addEventListener('touchend', endHandler, {passive: true});
             document.getElementById('btn-avatar').addEventListener('click', function() { if (activeSliderCatId) return; if (checkUnsavedChanges()) showRegistrationView(); });
-            document.getElementById('btn-select-today').addEventListener('click', function(e) { e.stopPropagation(); if(!this.disabled && !isAppLoading()) setToday(); });
-            document.getElementById('calendar-toggle-group').addEventListener('click', function() { if (activeSliderCatId || isAppLoading()) return; toggleCalendar(); });
-            document.getElementById('btn-prev-month').addEventListener('click', function() { if(!isAppLoading()) animateMonthChange(-1); });
-            document.getElementById('btn-next-month').addEventListener('click', function() { if(!isAppLoading()) animateMonthChange(1); });
+            document.getElementById('btn-select-today').addEventListener('click', function(e) { e.stopPropagation(); if(!this.disabled) setToday(); });
+            document.getElementById('calendar-toggle-group').addEventListener('click', function() { if (activeSliderCatId) return; toggleCalendar(); });
+            document.getElementById('btn-prev-month').addEventListener('click', function() { animateMonthChange(-1); });
+            document.getElementById('btn-next-month').addEventListener('click', function() { animateMonthChange(1); });
             document.getElementById('btn-close-slider').addEventListener('click', cancelSlider);
             document.getElementById('btn-save-report').addEventListener('click', submitReport);
             document.getElementById('btn-clear-changes').addEventListener('click', clearChanges);
-            document.getElementById('btn-reg-back').addEventListener('click', function() { if (this.disabled) return; showMainView(false); });
-            document.getElementById('btn-back-description').addEventListener('click', function() { showMainView(false); });
+            document.getElementById('btn-reg-back').addEventListener('click', function() { if(!this.disabled) showMainView(false); });
+            document.getElementById('btn-back-description').addEventListener('click', function() { if (!state.userExists || !state.isRegLocked) showRegistrationView(); else showMainView(false); });
             document.querySelectorAll('.btn-adjust').forEach(btn => { btn.addEventListener('click', function() { adjustValue(parseInt(this.dataset.val)); }); });
         }
 
-        function showToast(m, type = 'success', persistent = false) { 
+        function showToast(m, type = 'success') { 
             if (toastTimer) clearTimeout(toastTimer);
             var t = document.getElementById('toast'), tx = document.getElementById('toast-text'), ti = document.getElementById('toast-icon'); 
             t.classList.remove('visible', 'toast-bottom', 'toast-top');
-            if (type === 'warning') { ti.className = "fas fa-exclamation-triangle text-orange-400 text-2xl"; tx.innerHTML = m || "未報告のデータがあります<br>先に報告をしてください"; t.classList.add('toast-top'); } 
-            else { ti.className = (type === 'info') ? "fas fa-circle-info text-blue-400 text-2xl" : ((type === 'reset') ? "fas fa-rotate-left text-slate-400 text-2xl" : "fas fa-check-circle text-emerald-400 text-2xl"); tx.innerHTML = m; t.classList.add('toast-bottom'); }
+            if (type === 'warning') { 
+                ti.className = "fas fa-exclamation-triangle text-orange-400 text-2xl"; 
+                tx.innerHTML = m || "未報告のデータがあります<br>先に報告をしてください";
+                t.classList.add('toast-top');
+            } else {
+                ti.className = (type === 'info') ? "fas fa-circle-info text-blue-400 text-2xl" : ((type === 'reset') ? "fas fa-rotate-left text-slate-400 text-2xl" : "fas fa-check-circle text-emerald-400 text-2xl");
+                tx.innerHTML = m; t.classList.add('toast-bottom');
+            }
             setTimeout(() => t.classList.add('visible'), 50);
-            if (persistent) { t.onclick = () => { showRegistrationView(); hideToast(); }; } 
-            else { t.onclick = hideToast; toastTimer = setTimeout(hideToast, (type === 'warning' || type === 'info' || type === 'reset') ? 3500 : 2500); }
+            toastTimer = setTimeout(hideToast, (type === 'warning' || type === 'info' || type === 'reset') ? 3500 : 2500); 
         }
 
         function hideToast() { var t = document.getElementById('toast'); t.classList.remove('visible'); if (toastTimer) clearTimeout(toastTimer); }
@@ -701,63 +612,85 @@
 
         function showMainView(forceExpand = false) { 
             document.getElementById('app-body').classList.add('is-main-view');
-            hideAllViews(); document.getElementById('view-main').classList.remove('hidden'); document.getElementById('view-main-sticky').classList.remove('hidden'); document.getElementById('sticky-calendar-bar').classList.remove('hidden'); document.getElementById('calendar-separator').classList.remove('hidden');
+            hideAllViews();
+            document.getElementById('view-main').classList.remove('hidden'); 
+            document.getElementById('view-main-sticky').classList.remove('hidden'); 
+            document.getElementById('sticky-calendar-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden');
             syncHeaderStatus(); updateDateDisplay(); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); 
-            
-            updateUnregisteredOverlay();
-
-            if (!state.userExists || !state.userSetting?.roomId) { showToast("初期設定を行ってください<br><span class='text-xs opacity-70 underline tracking-tight font-bold'>ここをタップして設定画面へ</span>", "info", true); }
+            setTimeout(renderHistory, 10);
             if (forceExpand) { var el = document.getElementById('calendar-expansion'); if (!el.classList.contains('open')) toggleCalendar(); }
         }
 
         function showRegistrationView() { 
             document.getElementById('app-body').classList.remove('is-main-view');
-            hideAllViews(); hideToast(); document.getElementById('view-registration').classList.remove('hidden'); document.getElementById('sticky-registration-bar').classList.remove('hidden'); document.getElementById('calendar-separator').classList.remove('hidden');
-            syncHeaderStatus(); 
+            hideAllViews();
+            document.getElementById('view-registration').classList.remove('hidden'); 
+            document.getElementById('sticky-registration-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden');
+            syncHeaderStatus();
             if (state.userSetting) { state.selectedRegBase = state.userSetting.base; updateRegUI(true); } 
             else { state.selectedRegBase = null; state.isRegLocked = false; updateRegUI(); }
         }
 
         function showDescriptionView() {
             document.getElementById('app-body').classList.remove('is-main-view');
-            hideAllViews(); document.getElementById('view-description').classList.remove('hidden'); document.getElementById('sticky-description-bar').classList.remove('hidden'); document.getElementById('calendar-separator').classList.remove('hidden');
+            hideAllViews();
+            document.getElementById('view-description').classList.remove('hidden');
+            document.getElementById('sticky-description-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden');
             syncHeaderStatus();
-            if (!state.userExists || !state.userSetting?.roomId) { showToast("初期設定を行ってください<br><span class='text-xs opacity-70 underline tracking-tight font-bold'>ここをタップして設定画面へ</span>", "info", true); }
         }
 
         function hideAllViews() {
             ['view-main', 'view-main-sticky', 'view-registration', 'view-description', 'sticky-calendar-bar', 'sticky-registration-bar', 'sticky-description-bar', 'header-status-bar', 'calendar-separator', 'footer-actions'].forEach(id => {
-                var el = document.getElementById(id); if (el) { if (id.startsWith('view') || id.startsWith('sticky')) el.classList.add('hidden'); else el.style.display = 'none'; }
+                var el = document.getElementById(id);
+                if (el) { 
+                    if (id.startsWith('view') || id.startsWith('sticky')) el.classList.add('hidden'); 
+                    else el.style.display = 'none'; 
+                }
             });
         }
 
         function updateRegUI(isInit = false) {
-            var b = state.selectedRegBase ? state.selectedRegBase.trim() : null, isL = state.isRegLocked;
+            var b = state.selectedRegBase ? state.selectedRegBase.trim() : null;
+            var isLocked = state.isRegLocked;
             var btnBack = document.getElementById('btn-reg-back');
-            var badge = document.getElementById('lock-badge'); badge.innerText = isL ? "LOCKED" : "UNLOCKED";
-            badge.className = isL ? "absolute left-0 px-2 py-1 bg-slate-200 text-slate-500 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent" : "absolute left-0 px-2 py-1 bg-emerald-50 text-emerald-900 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm today-striped border border-emerald-100 z-10";
-            btnBack.disabled = !state.userExists;
+            btnBack.disabled = !state.userExists || !isLocked;
+            var badge = document.getElementById('lock-badge');
+            badge.innerText = isLocked ? "LOCKED" : "UNLOCKED";
+            badge.className = isLocked ? "absolute left-0 px-2 py-1 bg-slate-200 text-slate-500 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent" : "absolute left-0 px-2 py-1 bg-emerald-50 text-emerald-900 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm today-striped border border-emerald-100 z-10";
             ['KP', 'HP', 'FP'].forEach(id => { 
-                var el = document.getElementById(`base-${id}`); if (el) {
-                    if (id.toUpperCase() === (b || "").toUpperCase()) el.className = isL ? "btn-base-select h-12 rounded-xl bg-slate-200 border-none font-black text-xl text-slate-500 flex items-center justify-center cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-emerald-600 border-none font-black text-xl text-white flex items-center justify-center shadow-lg transform scale-105 transition-transform";
-                    else el.className = isL ? "btn-base-select h-12 rounded-xl bg-white border-none font-black text-xl text-slate-400 flex items-center justify-center opacity-40 cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-white border border-slate-200 font-black text-xl text-slate-400 flex items-center justify-center transition-all";
+                var el = document.getElementById(`base-${id}`);
+                if (el) {
+                    if (id.toUpperCase() === (b || "").toUpperCase()) {
+                        el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-slate-200 border-none font-black text-xl text-slate-500 flex items-center justify-center cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-emerald-600 border-none font-black text-xl text-white flex items-center justify-center shadow-lg transform scale-105 transition-transform";
+                    } else {
+                        el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-white border-none font-black text-xl text-slate-400 flex items-center justify-center opacity-40 cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-white border border-slate-200 font-black text-xl text-slate-400 flex items-center justify-center transition-all";
+                    }
                 }
             });
             var dSel = document.getElementById('reg-dept-select'), rSel = document.getElementById('reg-room-select');
-            dSel.disabled = isL || !b; rSel.disabled = isL || !dSel.value;
-            if (!b) { dSel.innerHTML = '<option value="">未選択</option>'; rSel.innerHTML = '<option value="">未選択</option>'; } 
-            else {
+            dSel.disabled = isLocked || !b; rSel.disabled = isLocked || !dSel.value;
+            if (!b) { 
+                dSel.innerHTML = '<option value="">未選択</option>'; rSel.innerHTML = '<option value="">未選択</option>'; 
+            } else {
                 var depts = [...new Set(state.locations.filter(l => l.base.trim().toUpperCase() === b.toUpperCase()).map(l => (l.dept || "未分類").trim()))]; 
                 dSel.innerHTML = '<option value="">選択してください</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
-                if (isInit && state.userSetting) { var cur = state.locations.find(l => String(l.id).trim() === String(state.userSetting.roomId).trim()); if (cur) { dSel.value = cur.dept.trim(); onRegDeptChange(true); } }
+                if (isInit && state.userSetting) { 
+                    var curRoomId = String(state.userSetting.roomId).trim();
+                    var cur = state.locations.find(l => String(l.id).trim() === curRoomId); 
+                    if (cur) { dSel.value = cur.dept.trim(); onRegDeptChange(true); } 
+                }
             }
             renderRegistrationFooter();
         }
 
         function renderRegistrationFooter() {
             var cont = document.getElementById('reg-footer-actions');
-            if (state.isRegLocked) cont.innerHTML = `<button onclick=\"unlockReg()\" class=\"btn-action btn-dark font-bold\"><i class=\"fas fa-unlock mr-2\"></i>ロックを解除</button>`;
-            else {
+            if (state.isRegLocked) {
+                cont.innerHTML = `<button onclick=\"unlockReg()\" class=\"btn-action btn-dark font-bold\"><i class=\"fas fa-unlock mr-2\"></i>ロックを解除</button>`;
+            } else {
                 var b = state.selectedRegBase, d = document.getElementById('reg-dept-select').value, r = document.getElementById('reg-room-select').value;
                 var isValid = b && (d !== "" && d !== "選択してください") && (r !== "" && r !== "選択してください");
                 cont.innerHTML = `<button id=\"btn-reg-change\" onclick=\"submitRegistration()\" class=\"btn-action btn-dark text-white font-bold\" ${isValid ? '' : 'disabled'}><i class=\"fas fa-lock mr-2\"></i>この設定で保存する</button>`;
@@ -765,162 +698,178 @@
         }
 
         function unlockReg() { state.isRegLocked = false; document.getElementById('reg-dept-select').value = ""; document.getElementById('reg-room-select').value = ""; updateRegUI(); }
+
         function regSelectBase(b) { if(state.isRegLocked) return; state.selectedRegBase = b.trim(); document.getElementById('reg-dept-select').value = ""; document.getElementById('reg-room-select').value = ""; updateRegUI(); }
+
         function onRegDeptChange(isInit = false) { 
             var b = state.selectedRegBase?.trim(), d = document.getElementById('reg-dept-select').value, rSel = document.getElementById('reg-room-select'); 
-            if (!d || d === "" || d === "選択してください" || !b) { rSel.disabled = true; rSel.innerHTML = '<option value="">未選択</option>'; } 
-            else { 
-                rSel.disabled = state.isRegLocked; var rms = state.locations.filter(l => l.base.trim().toUpperCase() === b.toUpperCase() && (l.dept || "未分類").trim() === d.trim()); 
+            if (!d || d === "" || d === "選択してください" || !b) { 
+                rSel.disabled = true; rSel.innerHTML = '<option value="">未選択</option>'; 
+            } else { 
+                rSel.disabled = state.isRegLocked; 
+                var rms = state.locations.filter(l => l.base.trim().toUpperCase() === b.toUpperCase() && (l.dept || "未分類").trim() === d.trim()); 
                 rSel.innerHTML = '<option value="">選択してください</option>' + rms.map(r => `<option value="${String(r.id).trim()}">${r.name}</option>`).join(''); 
                 if (isInit && state.userSetting) rSel.value = String(state.userSetting.roomId).trim(); 
             } 
             renderRegistrationFooter();
         }
+
         function onRegRoomChange() { renderRegistrationFooter(); }
-        
+
         function submitRegistration() { 
-            var rId = document.getElementById('reg-room-select').value, b = state.selectedRegBase, btn = document.getElementById('btn-reg-change'); if (!rId || !b) return;
+            var rId = document.getElementById('reg-room-select').value, b = state.selectedRegBase, btn = document.getElementById('btn-reg-change');
+            if (!rId || !b) return;
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch animate-spin mr-2"></i><span>保存中...</span>'; }
-            google.script.run
-                .withSuccessHandler(function(res) { 
-                    if (res && res.success) { 
-                        state.userExists = true; 
-                        state.userSetting = { base: b, roomId: rId }; 
-                        state.isRegLocked = true; 
-                        initRoomNavigation(); 
-                        syncHeaderStatus(); 
-                        setToday(); 
-                        showMainView(true); 
-                        showToast("設定を保存しました", "success"); 
-                    } 
-                    else { showToast("保存失敗", "warning"); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock mr-2"></i>この設定で保存する'; } }
-                })
-                .withFailureHandler(function(err) {
-                    showToast("通信エラー: " + err.message, "warning");
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock mr-2"></i>この設定で保存する'; }
-                })
-                .registerUserSetting(b, rId); 
+            google.script.run.withSuccessHandler(function(res) { 
+                if (res && res.success) {
+                    state.userSetting = { base: b, roomId: rId }; state.userExists = true; state.isRegLocked = true;
+                    initRoomNavigation(); syncHeaderStatus(); showMainView(true); showToast("設定を保存しました", "success"); 
+                } else { 
+                    showToast("保存失敗", "warning"); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock mr-2"></i>この設定で保存する'; }
+                }
+            }).registerUserSetting(b, rId); 
         }
 
         function openSlider(id, name) { 
-            if (!state.userSetting?.roomId) {
-                showToast("初期設定を行ってください<br><span class='text-xs opacity-70 underline tracking-tight font-bold'>ここをタップして設定画面へ</span>", "info", true);
-                showRegistrationView();
-                return;
-            }
             activeSliderCatId = id; var curRoomId = String(state.userSetting?.roomId || "").trim();
-            preSliderState.input = inputValues[id] || 0; var regVal = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[id] || 0;
+            preSliderState.input = inputValues[id] || 0;
+            var regVal = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[id] || 0;
             preSliderState.correction = (correctionValues[id] !== undefined) ? correctionValues[id] : regVal;
             document.getElementById('slider-cat-name').innerText = name; document.getElementById('slider-cat-id').innerText = "ID: " + id;
-            var room = state.locations.find(l => String(l.id).trim() === curRoomId); document.getElementById('slider-location-name').innerText = room ? room.name : "---";
+            var room = state.locations.find(l => String(l.id).trim() === curRoomId);
+            document.getElementById('slider-location-name').innerText = room ? room.name : "---";
             var catObj = state.categories.find(c => String(c.id).trim() === String(id).trim());
-            var dArea = document.getElementById('slider-cat-detail'); if (catObj && catObj.detail) { dArea.innerText = catObj.detail; dArea.classList.remove('hidden'); } else dArea.classList.add('hidden');
+            var dArea = document.getElementById('slider-cat-detail');
+            if (catObj && catObj.detail) { dArea.innerText = catObj.detail; dArea.classList.remove('hidden'); } else dArea.classList.add('hidden');
             if (correctionValues[id] === undefined) correctionValues[id] = regVal;
             document.getElementById('registered-val-field').value = correctionValues[id].toFixed(1);
             var curInput = inputValues[id] || 0; document.getElementById('manual-input-field').value = curInput > 0 ? curInput.toFixed(1) : ""; 
             document.getElementById('edit-lock-toggle').checked = false; document.getElementById('edit-lock-toggle').disabled = (regVal <= 0);
             toggleEditLock(false); document.body.classList.add('lock-scroll');
-            document.getElementById('slider-backdrop').classList.add('visible'); document.getElementById('slider-panel').style.display = 'block'; setTimeout(() => { document.getElementById('slider-panel').classList.add('visible'); }, 10); 
+            document.getElementById('slider-backdrop').classList.add('visible'); document.getElementById('slider-panel').style.display = 'block'; 
+            setTimeout(() => { document.getElementById('slider-panel').classList.add('visible'); }, 10); 
         }
-        function closeSlider() { document.getElementById('slider-panel').classList.remove('visible'); document.getElementById('slider-backdrop').classList.remove('visible'); if (activeSliderCatId && (inputValues[activeSliderCatId] > 0)) { var el = document.getElementById('calendar-expansion'); if (el.classList.contains('open')) toggleCalendar(true); } document.body.classList.remove('lock-scroll'); setTimeout(() => { if (!document.getElementById('slider-panel').classList.contains('visible')) document.getElementById('slider-panel').style.display = 'none'; }, 300); activeSliderCatId = null; renderCalendar(); }
+
+        function closeSlider() { 
+            document.getElementById('slider-panel').classList.remove('visible'); document.getElementById('slider-backdrop').classList.remove('visible');
+            if (activeSliderCatId && (inputValues[activeSliderCatId] > 0)) { var el = document.getElementById('calendar-expansion'); if (el.classList.contains('open')) toggleCalendar(true); }
+            document.body.classList.remove('lock-scroll');
+            setTimeout(() => { if (!document.getElementById('slider-panel').classList.contains('visible')) document.getElementById('slider-panel').style.display = 'none'; }, 300); 
+            activeSliderCatId = null; renderCalendar(); 
+        }
+
         function cancelSlider() { if (activeSliderCatId) { inputValues[activeSliderCatId] = preSliderState.input; correctionValues[activeSliderCatId] = preSliderState.correction; saveCurrentToCache(); renderCategoryCards(); updateFooterVisibility(); } closeSlider(); }
-        function adjustValue(n) { var isReg = document.getElementById('edit-lock-toggle').checked, field = document.getElementById(isReg ? 'registered-val-field' : 'manual-input-field'); var next = (parseFloat(field.value) || 0) + n; if (!isReg && next < 0) next = 0; field.value = next.toFixed(1); if (isReg) onRegisteredValChange(next); else onManualInput(next); }
+
+        function adjustValue(n) { 
+            var isReg = document.getElementById('edit-lock-toggle').checked, field = document.getElementById(isReg ? 'registered-val-field' : 'manual-input-field');
+            var next = (parseFloat(field.value) || 0) + n; if (!isReg && next < 0) next = 0;
+            field.value = next.toFixed(1); if (isReg) onRegisteredValChange(next); else onManualInput(next);
+        }
+
         function onManualInput(v) { var n = parseFloat(v); if (!isNaN(n)) { if (n < 0) { n = 0; document.getElementById('manual-input-field').value = "0.0"; } document.getElementById('input-slider').value = Math.min(100, n); updateValues(n); } else updateValues(0); }
+
         function onSliderInput(v) { var n = parseFloat(v), isReg = document.getElementById('edit-lock-toggle').checked; document.getElementById(isReg ? 'registered-val-field' : 'manual-input-field').value = n.toFixed(1); if (isReg) onRegisteredValChange(n); else onManualInput(n); }
+
         function onRegisteredValChange(v) { var n = parseFloat(v); if (!isNaN(n) && activeSliderCatId) { correctionValues[activeSliderCatId] = n; saveCurrentToCache(); renderCategoryCards(); updateFooterVisibility(); updateSliderButtonState(); document.getElementById('input-slider').value = Math.min(100, n); } }
+
         function toggleEditLock(checked) { 
-            var rF = document.getElementById('registered-val-field'), mF = document.getElementById('manual-input-field'), sl = document.getElementById('input-slider'), lM = document.getElementById('label-manual'), lR = document.getElementById('label-registered');
-            if (checked) { rF.disabled = false; rF.classList.add('bg-blue-100', '!border-slate-900'); mF.disabled = true; mF.classList.remove('bg-blue-100', '!border-slate-900'); lM.classList.add('opacity-40'); lR.classList.remove('opacity-40'); sl.value = Math.min(100, parseFloat(rF.value) || 0); handleInputFocus(rF); } 
-            else { rF.disabled = true; rF.classList.remove('bg-blue-100', '!border-slate-900'); mF.disabled = false; mF.classList.add('bg-blue-100', '!border-slate-900'); lM.classList.remove('opacity-40'); lR.classList.add('opacity-40'); sl.value = Math.min(100, parseFloat(mF.value) || 0); handleInputFocus(mF); }
+            var rF = document.getElementById('registered-val-field'), mF = document.getElementById('manual-input-field'), sl = document.getElementById('input-slider');
+            var lM = document.getElementById('label-manual'), lR = document.getElementById('label-registered');
+            if (checked) {
+                rF.disabled = false; rF.classList.add('bg-blue-100', '!border-slate-900'); mF.disabled = true; mF.classList.remove('bg-blue-100', '!border-slate-900');
+                lM.classList.add('opacity-40'); lR.classList.remove('opacity-40'); sl.value = Math.min(100, parseFloat(rF.value) || 0); handleInputFocus(rF);
+            } else {
+                rF.disabled = true; rF.classList.remove('bg-blue-100', '!border-slate-900'); mF.disabled = false; mF.classList.add('bg-blue-100', '!border-slate-900');
+                lM.classList.remove('opacity-40'); lR.classList.add('opacity-40'); sl.value = Math.min(100, parseFloat(mF.value) || 0); handleInputFocus(mF);
+            }
             updateSliderButtonState();
         }
-        function updateSliderButtonState() { var btn = document.getElementById('btn-confirm-slider'); if (!activeSliderCatId) { btn.disabled = true; return; } var curRoomId = String(state.userSetting?.roomId || "").trim(); var orig = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[activeSliderCatId] || 0; var curIn = inputValues[activeSliderCatId] || 0, curCorr = correctionValues[activeSliderCatId] !== undefined ? correctionValues[activeSliderCatId] : orig; btn.disabled = !(curIn > 0 || Math.abs(curCorr - orig) >= 0.01); }
-        function updateValues(n) { if (activeSliderCatId) { inputValues[activeSliderCatId] = n; saveCurrentToCache(); renderCategoryCards(); updateFooterVisibility(); updateSliderButtonState(); } }
-        function saveCurrentToCache() { var curRoomId = String(state.userSetting?.roomId || "").trim(); var hasChange = Object.values(inputValues).some(v => v > 0) || Object.keys(correctionValues).some(id => { var orig = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[id] || 0; return Math.abs(correctionValues[id] - orig) >= 0.01; }); if (hasChange) state.pendingChanges[state.selectedDate] = { inputs: Object.assign({}, inputValues), corrections: Object.assign({}, correctionValues) }; else delete state.pendingChanges[state.selectedDate]; }
-        function updateFooterVisibility() { document.getElementById('footer-actions').style.display = Object.keys(state.pendingChanges).length > 0 ? 'block' : 'none'; }
-        function clearChanges() { if (Object.keys(state.pendingChanges).length === 0) return; state.pendingChanges = {}; inputValues = {}; correctionValues = {}; renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory(); showToast("入力をクリアしました", "reset"); }
-        function toggleCalendar(silent = false) { var el = document.getElementById('calendar-expansion'), icon = document.getElementById('cal-toggle-icon'); el.classList.toggle('open'); icon.style.transform = el.classList.contains('open') ? 'rotate(0deg)' : 'rotate(180deg)'; if (silent) { var c = document.getElementById('cal-toggle-icon-container'); c.classList.add('!bg-emerald-600', '!text-white'); setTimeout(() => c.classList.remove('!bg-emerald-600', '!text-white'), 200); } renderCalendar(); }
-        
-        function toggleHistory() { 
-            var el = document.getElementById('history-expansion');
+
+        function updateSliderButtonState() {
+            var btn = document.getElementById('btn-confirm-slider'); if (!activeSliderCatId) { btn.disabled = true; return; }
             var curRoomId = String(state.userSetting?.roomId || "").trim();
-            var dayData = state.registeredData[state.selectedDate]?.[curRoomId];
-            var hasLogs = dayData && dayData.logs && dayData.logs.length > 0;
-            if (!hasLogs) return; 
-            el.classList.toggle('open');
-            updateHistoryButtonLabel();
+            var orig = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[activeSliderCatId] || 0;
+            var curIn = inputValues[activeSliderCatId] || 0, curCorr = correctionValues[activeSliderCatId] !== undefined ? correctionValues[activeSliderCatId] : orig;
+            btn.disabled = !(curIn > 0 || Math.abs(curCorr - orig) >= 0.01);
         }
 
-        function updateHistoryButtonLabel() {
-            var btnSpan = document.querySelector('#btn-toggle-history span');
-            var icon = document.getElementById('history-icon');
-            var el = document.getElementById('history-expansion');
+        function updateValues(n) { if (activeSliderCatId) { inputValues[activeSliderCatId] = n; saveCurrentToCache(); renderCategoryCards(); updateFooterVisibility(); updateSliderButtonState(); } }
+        
+        function saveCurrentToCache() {
             var curRoomId = String(state.userSetting?.roomId || "").trim();
-            var dayData = state.registeredData[state.selectedDate]?.[curRoomId];
-            var hasLogs = dayData && dayData.logs && dayData.logs.length > 0;
+            var hasChange = Object.values(inputValues).some(v => v > 0) || Object.keys(correctionValues).some(id => {
+                var orig = (state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {})[id] || 0;
+                return Math.abs(correctionValues[id] - orig) >= 0.01;
+            });
+            if (hasChange) state.pendingChanges[state.selectedDate] = { inputs: Object.assign({}, inputValues), corrections: Object.assign({}, correctionValues) };
+            else delete state.pendingChanges[state.selectedDate];
+        }
 
-            if (!hasLogs) {
-                btnSpan.innerText = "履歴なし";
-                icon.className = "fas fa-minus text-[10px]";
-                if (el) el.classList.remove('open');
+        function updateFooterVisibility() { document.getElementById('footer-actions').style.display = Object.keys(state.pendingChanges).length > 0 ? 'block' : 'none'; }
+        
+        function clearChanges() { if (Object.keys(state.pendingChanges).length === 0) return; state.pendingChanges = {}; inputValues = {}; correctionValues = {}; renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory(); showToast("入力をクリアしました", "reset"); }
+
+        function toggleCalendar(silent = false) { 
+            var el = document.getElementById('calendar-expansion'), icon = document.getElementById('cal-toggle-icon'); 
+            el.classList.toggle('open'); icon.style.transform = el.classList.contains('open') ? 'rotate(0deg)' : 'rotate(180deg)'; 
+            if (silent) {
+                var c = document.getElementById('cal-toggle-icon-container'); c.classList.add('!bg-emerald-600', '!text-white');
+                setTimeout(() => c.classList.remove('!bg-emerald-600', '!text-white'), 200);
+            }
+            renderCalendar(); 
+        }
+
+        function toggleHistory() {
+            var el = document.getElementById('history-expansion');
+            var icon = document.getElementById('history-icon');
+            var btnText = document.querySelector('#btn-toggle-history span');
+            el.classList.toggle('open');
+            if (el.classList.contains('open')) {
+                icon.className = "fas fa-chevron-up text-[10px]";
+                btnText.innerText = "履歴を閉じる";
             } else {
-                if (el.classList.contains('open')) {
-                    btnSpan.innerText = "履歴を閉じる";
-                    icon.className = "fas fa-chevron-up text-[10px]";
-                } else {
-                    btnSpan.innerText = "履歴を表示する";
-                    icon.className = "fas fa-chevron-down text-[10px]";
-                }
+                icon.className = "fas fa-chevron-down text-[10px]";
+                btnText.innerText = "履歴を表示する";
             }
         }
 
         function renderHistory() {
             var listCont = document.getElementById('history-list'), curRoomId = String(state.userSetting?.roomId || "").trim(), dayData = state.registeredData[state.selectedDate]?.[curRoomId];
-            updateHistoryButtonLabel(); 
             if (!dayData || !dayData.logs || dayData.logs.length === 0) { listCont.innerHTML = '<div class="text-center py-4 text-slate-400 text-sm font-bold">この日の登録データはありません</div>'; return; }
             var sortedLogs = [...dayData.logs].sort((a, b) => b.time.localeCompare(a.time)), html = '<div class="flex flex-col gap-3">';
-            sortedLogs.forEach(log => { var disp = "---"; if (log.time) { var pts = log.time.split(' '); disp = pts.length >= 2 ? pts[0].split(/\/|-/).slice(1).join('/') + ' ' + pts[1].slice(0, 5) : log.time; }
-            html += `<div class="bg-white p-3 rounded-xl border-2 border-slate-100 shadow-sm flex flex-col gap-2"><div class="flex justify-between items-center"><div class="flex items-center gap-2"><span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded tracking-tighter">${disp}</span><span class="text-sm font-bold text-slate-800">${log.catName}</span></div><div class="flex items-baseline gap-0.5"><span class="text-lg font-black text-slate-900">${log.val.toFixed(1)}</span><span class="text-[10px] font-bold text-slate-400 uppercase">Kg</span></div></div><div class="flex items-center gap-1.5 pt-1 border-t border-slate-50"><i class="fas fa-user text-[9px] text-slate-300"></i><span class="text-[10px] font-bold text-slate-400 truncate flex-1">${log.user}</span></div></div>`; });
+            sortedLogs.forEach(log => {
+                var disp = "---"; if (log.time) { var pts = log.time.split(' '); disp = pts.length >= 2 ? pts[0].split(/\/|-/).slice(1).join('/') + ' ' + pts[1].slice(0, 5) : log.time; }
+                html += `<div class="bg-white p-3 rounded-xl border-2 border-slate-100 shadow-sm flex flex-col gap-2"><div class="flex justify-between items-center"><div class="flex items-center gap-2"><span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded tracking-tighter">${disp}</span><span class="text-sm font-bold text-slate-800">${log.catName}</span></div><div class="flex items-baseline gap-0.5"><span class="text-lg font-black text-slate-900">${log.val.toFixed(1)}</span><span class="text-[10px] font-bold text-slate-400 uppercase">Kg</span></div></div><div class="flex items-center gap-1.5 pt-1 border-t border-slate-50"><i class="fas fa-user text-[9px] text-slate-300"></i><span class="text-[10px] font-bold text-slate-400 truncate flex-1">${log.user}</span></div></div>`;
+            });
             listCont.innerHTML = html + '</div>';
         }
 
         function animateMonthChange(n) {
-            if (activeSliderCatId || isAppLoading()) return;
+            if (activeSliderCatId) return;
             var w = document.getElementById('calendar-slide-wrapper'); w.style.transition = 'transform 0.3s ease-out'; w.style.transform = n > 0 ? 'translateX(-100%)' : 'translateX(100%)';
             setTimeout(() => {
-                calendarViewDate.setMonth(calendarViewDate.getMonth() + n);
-                var monthKey = calendarViewDate.getFullYear() + "-" + (calendarViewDate.getMonth() + 1);
-                var now = new Date(state.serverTime);
-                var targetDate = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth(), 1);
-                var currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-                if (!state.loadedMonths.includes(monthKey) && targetDate < currentMonthStart) { fetchHistoricalData(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + 1); } 
-                else { renderCalendar(); }
-                w.style.transition = 'none'; w.style.transform = n > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+                calendarViewDate.setMonth(calendarViewDate.getMonth() + n); renderCalendar(); w.style.transition = 'none'; w.style.transform = n > 0 ? 'translateX(100%)' : 'translateX(-100%)';
                 setTimeout(() => { w.style.transition = 'transform 0.3s ease-out'; w.style.transform = 'translateX(0)'; }, 20);
             }, 300);
         }
-        
-        function fetchHistoricalData(year, month) {
-            setLoadingUi(true);
-            google.script.run
-                .withSuccessHandler(function(newData) {
-                    Object.assign(state.registeredData, newData); state.loadedMonths.push(year + "-" + month);
-                    setLoadingUi(false); renderCalendar();
-                })
-                .withFailureHandler(function(err) {
-                    setLoadingUi(false); showToast("通信エラー: " + err.message, "warning");
-                })
-                .getMonthlyData(year, month);
-        }
 
-        function setToday(c = true, skipHistory = false) { var n = new Date(state.serverTime); calendarViewDate = new Date(n); selectDateFromCal(n.toISOString().split('T')[0], false, skipHistory); }
-        function updateTodayButtonState() { var btn = document.getElementById('btn-select-today'), todayStr = new Date(state.serverTime).toISOString().split('T')[0]; if (state.selectedDate === todayStr) { btn.disabled = true; btn.innerText = "今日"; btn.className = "px-2 py-1 rounded-lg text-sm font-black bg-slate-200 text-slate-500 border border-transparent shadow-none cursor-not-allowed transition-all"; } else { btn.disabled = false; btn.innerText = "今日を選択"; btn.className = "today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform cursor-pointer"; } }
+        function setToday(c = true) { var n = new Date(state.serverTime); calendarViewDate = new Date(n); selectDateFromCal(n.toISOString().split('T')[0], false); }
+
+        function updateTodayButtonState() {
+            var btn = document.getElementById('btn-select-today'), todayStr = new Date(state.serverTime).toISOString().split('T')[0];
+            if (state.selectedDate === todayStr) {
+                btn.disabled = true; btn.innerText = "今日"; btn.className = "px-2 py-1 rounded-lg text-sm font-black bg-slate-200 text-slate-500 border border-transparent shadow-none cursor-not-allowed transition-all";
+            } else {
+                btn.disabled = false; btn.innerText = "今日を選択"; btn.className = "today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform cursor-pointer";
+            }
+        }
         
-        function selectDateFromCal(ds, c = true, skipHistory = false) { 
-            if (activeSliderCatId || isAppLoading()) return; 
-            if (!state.userSetting?.roomId) { showToast("初期設定を行ってください<br><span class='text-xs opacity-70 underline tracking-tight font-bold'>ここをタップして設定画面へ</span>", "info", true); showRegistrationView(); return; }
-            state.selectedDate = ds; var cached = state.pendingChanges[ds] || { inputs: {}, corrections: {} }; inputValues = Object.assign({}, cached.inputs); correctionValues = Object.assign({}, cached.corrections); updateDateDisplay(); updateTodayButtonState(); if (c && document.getElementById('calendar-expansion').classList.contains('open')) toggleCalendar(true); renderCalendar(); renderCategoryCards(); updateFooterVisibility(); 
-            if (!skipHistory) renderHistory(); 
+        function selectDateFromCal(ds, c = true) { 
+            if (activeSliderCatId) return; state.selectedDate = ds; var cached = state.pendingChanges[ds] || { inputs: {}, corrections: {} };
+            inputValues = Object.assign({}, cached.inputs); correctionValues = Object.assign({}, cached.corrections);
+            updateDateDisplay(); updateTodayButtonState();
+            if (c && document.getElementById('calendar-expansion').classList.contains('open')) toggleCalendar(true); 
+            renderCalendar(); renderCategoryCards(); updateFooterVisibility(); renderHistory();
         }
 
         function renderCalendar() {
@@ -934,9 +883,33 @@
                 var isS = state.selectedDate === ds, isT = ds === tStr, reg = state.registeredData[ds]?.[curRoomId], pending = state.pendingChanges[ds];
                 var col = (new Date(y, m, d).getDay() === 0) ? "text-sunday" : (new Date(y, m, d).getDay() === 6 ? "text-saturday" : "text-[#334155]");
                 var styleClass = "h-9 w-full rounded-lg font-black text-[13px] flex items-center justify-center transition-all relative bg-white " + (isS ? "text-emerald-700 " : "border border-transparent " + col);
-                var valTextHtml = ''; if (pending) { var diff = state.categories.filter(c => isCategoryAllowed(c, myB)).reduce((acc, c) => acc + ((pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : (reg?.cats?.[c.id] || 0)) + (pending.inputs[c.id] || 0)), 0) - (reg ? reg.total : 0); if (Math.abs(diff) >= 0.01) valTextHtml = `<div class="calendar-val-pending ${diff > 0 ? "text-pending-plus" : "text-pending-minus"}">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</div>`; } else if (reg?.total > 0) { valTextHtml = `<div class="calendar-val">${reg.total.toFixed(1)}</div>`; }
-                var inner = "absolute inset-0.5 rounded-lg pointer-events-none"; var bgHtml = ''; if (reg) bgHtml += `<div class="${inner} bg-emerald-50"></div>`; if (isT) bgHtml += `<div class="${inner} today-striped border-none"></div>`; if (isS) bgHtml += `<div class="${inner} border-2 border-emerald-600 z-10"></div>`;
-                var contentHtml = `<div class="relative z-20 flex flex-col items-center justify-center leading-none w-full"><div class="relative flex items-center justify-center h-4"><span>${d}</span>${pending ? '<div class="absolute left-full ml-0.5 top-[1px] w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>' : ''}</div>${valTextHtml}</div>`;
+                
+                var valTextHtml = '';
+                if (pending) {
+                    var diff = state.categories.filter(c => isCategoryAllowed(c, myB)).reduce((acc, c) => acc + ((pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : (reg?.cats?.[c.id] || 0)) + (pending.inputs[c.id] || 0)), 0) - (reg ? reg.total : 0);
+                    if (Math.abs(diff) >= 0.01) valTextHtml = `<div class="calendar-val-pending ${diff > 0 ? "text-pending-plus" : "text-pending-minus"}">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</div>`;
+                } else if (reg?.total > 0) {
+                    valTextHtml = `<div class="calendar-val">${reg.total.toFixed(1)}</div>`;
+                }
+
+                var inner = "absolute inset-0.5 rounded-lg pointer-events-none";
+                var bgHtml = '';
+                // 全ての背景装飾をinset-0.5に統一
+                if (reg) bgHtml += `<div class="${inner} bg-emerald-50"></div>`;
+                if (isT) bgHtml += `<div class="${inner} today-striped border-none"></div>`;
+                if (isS) bgHtml += `<div class="${inner} border-2 border-emerald-600 z-10"></div>`;
+                
+                // 日付数値と数値を垂直方向で中央揃えにするためのコンテナ
+                var contentHtml = `
+                    <div class="relative z-20 flex flex-col items-center justify-center leading-none w-full">
+                        <div class="relative flex items-center justify-center h-4">
+                            <span>${d}</span>
+                            ${pending ? '<div class="absolute left-full ml-0.5 top-[1px] w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>' : ''}
+                        </div>
+                        ${valTextHtml}
+                    </div>
+                `;
+                
                 grid.innerHTML += `<button id="cal-day-${ds}" class="${styleClass}">${bgHtml}${contentHtml}</button>`;
                 (function(dStr) { setTimeout(() => { var b = document.getElementById('cal-day-'+dStr); if(b) b.onclick = function(){ selectDateFromCal(dStr); }; }, 0); })(ds);
             }
@@ -945,10 +918,6 @@
 
         function renderCategoryCards() {
             var cont = document.getElementById('input-rows'), myB = state.userSetting?.base, curRoomId = String(state.userSetting?.roomId || "").trim(), room = state.locations.find(l => String(l.id).trim() === curRoomId);
-            var historyContainer = document.getElementById('history-container');
-            if (!state.userSetting?.roomId) { cont.innerHTML = ''; if (historyContainer) historyContainer.classList.add('hidden'); return; }
-            if (historyContainer) historyContainer.classList.remove('hidden');
-            cont.className = "grid grid-cols-2 gap-3 slide-content";
             document.getElementById('current-room-display-name').innerText = "場所：" + (room ? room.name : "---");
             var dots = document.getElementById('room-dots-container'); if (dots) dots.innerHTML = state.roomsInDept.map((r, i) => `<div class="h-1.5 rounded-full transition-all duration-300 ${i === state.activeRoomIndex ? 'w-4 bg-emerald-600' : 'w-1.5 bg-slate-200'}"></div>`).join('');
             var reg = state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {};
@@ -956,7 +925,6 @@
                 var orig = reg[c.id] || 0, cur = (correctionValues[c.id] !== undefined ? correctionValues[c.id] : orig) + (inputValues[c.id] || 0), diff = cur - orig, isP = Math.abs(diff) >= 0.01;
                 return `<div class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all overflow-hidden ${isP ? "border-2 border-orange-500 bg-orange-50/20" : (cur > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border-2 border-slate-200 bg-white")}" onclick="openSlider('${c.id}', '${c.name}')">${c.detail ? `<div id="tooltip-${c.id}" class="absolute inset-3 bg-slate-900/90 text-white rounded-lg flex items-center justify-center p-2 opacity-0 invisible transition-all duration-200 z-10 pointer-events-none text-center"><p class="text-[12px] leading-snug font-medium">${c.detail}</p></div>` : ''}<div><div class="flex items-center justify-between gap-1"><div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1 pr-1">${c.name}</div>${c.detail ? `<div class="cursor-help flex items-center" onclick="showTooltip('${c.id}', event)"><i class="fa-solid fa-circle-info text-slate-300 text-[15px]"></i></div>` : ''}</div><div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div></div><div class="flex flex-col items-end pb-1.5 relative"><div class="absolute bottom-full right-6 mb-0.5 whitespace-nowrap">${isP ? `<span class="text-sm font-black ${diff > 0 ? "text-orange-500" : "text-blue-500"} leading-none">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</span>` : ''}</div><div class="flex items-baseline gap-1"><div class="text-3xl font-black text-[#1e293b] leading-none">${cur.toLocaleString(undefined,{minimumFractionDigits:1})}</div><div class="text-xs font-bold text-slate-500">Kg</div></div></div></div>`;
             }).join('');
-            updateHistoryButtonLabel();
         }
 
         async function submitReport() {
@@ -971,14 +939,11 @@
                 }).filter(x => x !== null);
                 if (items.length > 0) {
                     btn.innerHTML = `<i class="fas fa-circle-notch animate-spin mr-2"></i><span>報告中...</span>`;
-                    await new Promise(res => google.script.run
-                        .withSuccessHandler(r => {
-                            if (!state.registeredData[d]) state.registeredData[d] = {}; if (!state.registeredData[d][curR]) state.registeredData[d][curR] = { total: 0, cats: {}, logs: [] };
-                            items.forEach(it => { state.registeredData[d][curR].cats[it.categoryId] = parseFloat(it.value); state.registeredData[d][curR].logs = state.registeredData[d][curR].logs.filter(l => l.catId !== it.categoryId); state.registeredData[d][curR].logs.push({ catId: it.categoryId, catName: it.categoryName, val: parseFloat(it.value), user: r.user || '自分', time: r.time || '今' }); });
-                            state.registeredData[d][curR].total = Object.values(state.registeredData[d][curR].cats).reduce((a, b) => a + b, 0); if (d === state.selectedDate) { inputValues = {}; correctionValues = {}; } delete state.pendingChanges[d]; res();
-                        })
-                        .withFailureHandler(err => { showToast("報告エラー: " + err.message, "warning"); btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane text-blue-200"></i><span>報告する</span>'; res(); })
-                        .executeSaveReport({ date: d, baseName: state.userSetting.base, roomId: curR, items: items }));
+                    await new Promise(res => google.script.run.withSuccessHandler(r => {
+                        if (!state.registeredData[d]) state.registeredData[d] = {}; if (!state.registeredData[d][curR]) state.registeredData[d][curR] = { total: 0, cats: {}, logs: [] };
+                        items.forEach(it => { state.registeredData[d][curR].cats[it.categoryId] = parseFloat(it.value); state.registeredData[d][curR].logs = state.registeredData[d][curR].logs.filter(l => l.catId !== it.categoryId); state.registeredData[d][curR].logs.push({ catId: it.categoryId, catName: it.categoryName, val: parseFloat(it.value), user: r.user || '自分', time: r.time || '今' }); });
+                        state.registeredData[d][curR].total = Object.values(state.registeredData[d][curR].cats).reduce((a, b) => a + b, 0); if (d === state.selectedDate) { inputValues = {}; correctionValues = {}; } delete state.pendingChanges[d]; res();
+                    }).executeSaveReport({ date: d, baseName: state.userSetting.base, roomId: curR, items: items }));
                 } else delete state.pendingChanges[d];
             }
             showToast("報告が完了しました"); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory(); if (!document.getElementById('calendar-expansion').classList.contains('open')) toggleCalendar(true); btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane text-blue-200"></i><span>報告する</span>';
@@ -987,13 +952,13 @@
         function initSwipeSupport() {
             var eC = document.getElementById('calendar-expansion'), eK = document.getElementById('input-rows-container'), sX = 0, sY = 0;
             eC.addEventListener('touchstart', e => { sX = e.touches[0].clientX; sY = e.touches[0].clientY; }, {passive: true});
-            eC.addEventListener('touchend', e => { var x = e.changedTouches[0].clientX - sX; if (Math.abs(x) > 50 && Math.abs(x) > Math.abs(e.changedTouches[0].clientY - sY)) { if(!isAppLoading()) animateMonthChange(x > 0 ? -1 : 1); } }, {passive: true});
+            eC.addEventListener('touchend', e => { var x = e.changedTouches[0].clientX - sX; if (Math.abs(x) > 50 && Math.abs(x) > Math.abs(e.changedTouches[0].clientY - sY)) animateMonthChange(x > 0 ? -1 : 1); }, {passive: true});
             eK.addEventListener('touchstart', e => { sX = e.touches[0].clientX; sY = e.touches[0].clientY; }, {passive: true});
             eK.addEventListener('touchend', e => { var x = e.changedTouches[0].clientX - sX; if (Math.abs(x) > 50 && Math.abs(x) > Math.abs(e.changedTouches[0].clientY - sY)) animateRoomSwitch(x > 0 ? -1 : 1); }, {passive: true});
         }
 
         function animateRoomSwitch(dir) {
-            if (state.roomsInDept.length <= 1 || isAppLoading()) return;
+            if (state.roomsInDept.length <= 1) return;
             var nX = state.activeRoomIndex + dir; if (nX < 0 || nX >= state.roomsInDept.length) return;
             var w = document.getElementById('input-rows'); w.style.transition = 'transform 0.3s ease-out'; w.style.transform = dir > 0 ? 'translateX(-100%)' : 'translateX(100%)';
             setTimeout(() => {
