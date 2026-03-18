@@ -115,7 +115,7 @@
         #calendar-expansion.open { max-height: 1000px; opacity: 1; }
 
         #history-expansion { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, opacity 0.3s ease; opacity: 0; }
-        #history-expansion.open { max-height: 1000px; opacity: 1; margin-top: 0.75rem; }
+        #history-expansion.open { max-height: 1500px; opacity: 1; margin-top: 0.75rem; }
 
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -162,6 +162,14 @@
             border-bottom-color: #e2e8f0;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
+
+        /* 追記：初期設定未完了時のカレンダー無効化スタイル */
+        .disabled-calendar {
+            filter: grayscale(1);
+            opacity: 0.5;
+            pointer-events: none !important;
+            user-select: none;
+        }
     </style>
 </head>
 <body id="app-body" class="bg-slate-50 min-h-screen">
@@ -190,18 +198,18 @@
                             <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
                             <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
                         </div>
-                        <div id="edit-lock-container" class="flex items-center gap-2 mt-1.5">
-                            <label class="switch">
-                                <input type="checkbox" id="edit-lock-toggle" onchange="toggleEditLock(this.checked)">
-                                <span class="slider-switch"></span>
-                            </label>
-                            <span id="edit-lock-label" class="text-sm font-bold text-slate-600">既登録分を修正する</span>
-                        </div>
                     </div>
                 </div>
             </div>
             <div class="flex flex-col items-center py-2">
                 <div class="flex items-end gap-3">
+                    <div id="edit-lock-container" class="flex flex-col items-center mb-3">
+                        <label class="switch">
+                            <input type="checkbox" id="edit-lock-toggle" onchange="toggleEditLock(this.checked)">
+                            <span class="slider-switch"></span>
+                        </label>
+                        <span id="edit-lock-label" class="text-[11px] font-black text-slate-500 mt-1">修正</span>
+                    </div>
                     <div class="flex flex-col items-center">
                         <span id="label-registered" class="text-sm font-bold text-slate-400 mb-1 uppercase tracking-tight">登録済</span>
                         <input type="number" id="registered-val-field" step="0.1" inputmode="decimal" class="val-input !border-slate-200" oninput="onRegisteredValChange(this.value)">
@@ -323,15 +331,13 @@
                     <div id="input-rows-container" class="touch-pan-y slide-container">
                         <div id="input-rows" class="grid grid-cols-2 gap-3 slide-content"></div>
                     </div>
-                    <div class="mt-8 mb-4 flex flex-col items-center">
+                    <div id="main-history-container" class="mt-8 mb-4 flex flex-col items-center">
                         <button id="btn-toggle-history" class="text-slate-400 font-bold text-sm flex items-center gap-2 py-2 px-4 rounded-full border border-slate-200 bg-white active:bg-slate-50 transition-colors shadow-sm" onclick="toggleHistory()">
                             <i id="history-icon" class="fas fa-chevron-down text-[10px]"></i>
                             <span>履歴を表示する</span>
                         </button>
-                        <div id="history-expansion" class="w-full">
-                            <div class="app-card p-4 border-2 border-slate-200 bg-slate-50/50">
-                                <div id="history-list" class="space-y-4"></div>
-                            </div>
+                        <div id="history-expansion" class="w-full px-1">
+                            <div id="history-list" class="mt-4"></div>
                         </div>
                     </div>
                 </div>
@@ -438,7 +444,7 @@
         </footer>
     </div>
 
-    <div id="toast" onclick="hideToast()">
+    <div id="toast" onclick="onToastClick()">
         <i id="toast-icon"></i>
         <span id="toast-text"></span>
     </div>
@@ -454,7 +460,7 @@
             } } }; 
         }
 
-        var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "" };
+        var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "", currentToastType: null };
         var inputValues = {}; var correctionValues = {};
         var calendarViewDate = new Date(); var activeSliderCatId = null;
         var iconTimer = null; 
@@ -488,7 +494,8 @@
                 } else {
                     state.isRegLocked = false;
                     showMainView();
-                    showToast("初期設定を行ってください", "info");
+                    // 初期表示時、設定未完了ならメッセージトーストを表示
+                    showToast("こちらをクリックして初期設定を完了させてください", "setup");
                 }
                 document.getElementById('display-user-email').innerText = userEmail;
                 document.getElementById('global-user-avatar').src = "https://ui-avatars.com/api/?background=2563eb&color=fff&bold=true&name=" + encodeURIComponent(userEmail);
@@ -584,21 +591,37 @@
 
         function showToast(m, type = 'success') { 
             if (toastTimer) clearTimeout(toastTimer);
+            state.currentToastType = type;
             var t = document.getElementById('toast'), tx = document.getElementById('toast-text'), ti = document.getElementById('toast-icon'); 
             t.classList.remove('visible', 'toast-bottom', 'toast-top');
             if (type === 'warning') { 
                 ti.className = "fas fa-exclamation-triangle text-orange-400 text-2xl"; 
                 tx.innerHTML = m || "未報告のデータがあります<br>先に報告をしてください";
                 t.classList.add('toast-top');
+            } else if (type === 'setup') {
+                ti.className = "fas fa-triangle-exclamation text-orange-400 text-2xl";
+                tx.innerHTML = m;
+                t.classList.add('toast-bottom');
             } else {
                 ti.className = (type === 'info') ? "fas fa-circle-info text-blue-400 text-2xl" : ((type === 'reset') ? "fas fa-rotate-left text-slate-400 text-2xl" : "fas fa-check-circle text-emerald-400 text-2xl");
                 tx.innerHTML = m; t.classList.add('toast-bottom');
             }
             setTimeout(() => t.classList.add('visible'), 50);
-            toastTimer = setTimeout(hideToast, (type === 'warning' || type === 'info' || type === 'reset') ? 3500 : 2500); 
+            
+            // setup タイプの場合はタイマーによる自動非表示を行わない
+            if (type !== 'setup') {
+                toastTimer = setTimeout(hideToast, (type === 'warning' || type === 'info' || type === 'reset') ? 3500 : 2500); 
+            }
         }
 
-        function hideToast() { var t = document.getElementById('toast'); t.classList.remove('visible'); if (toastTimer) clearTimeout(toastTimer); }
+        function onToastClick() {
+            if (state.currentToastType === 'setup') {
+                showRegistrationView();
+            }
+            hideToast();
+        }
+
+        function hideToast() { var t = document.getElementById('toast'); t.classList.remove('visible'); if (toastTimer) clearTimeout(toastTimer); state.currentToastType = null; }
 
         function checkUnsavedChanges() { if (Object.keys(state.pendingChanges).length > 0) { showToast("", "warning"); return false; } return true; }
 
@@ -617,6 +640,22 @@
             document.getElementById('view-main-sticky').classList.remove('hidden'); 
             document.getElementById('sticky-calendar-bar').classList.remove('hidden');
             document.getElementById('calendar-separator').classList.remove('hidden');
+            
+            // 追記：初期設定未完了時のカレンダーグレーアウト制御
+            var calBar = document.getElementById('sticky-calendar-bar');
+            var calExp = document.getElementById('calendar-expansion');
+            if (calBar) calBar.classList.toggle('disabled-calendar', !state.userExists);
+            if (calExp) calExp.classList.toggle('disabled-calendar', !state.userExists);
+
+            // 追記：初期設定未完了時の履歴ボタン制御
+            var histCont = document.getElementById('main-history-container');
+            if (histCont) histCont.classList.toggle('hidden', !state.userExists);
+
+            // 追記：設定未完了ならトーストを出す
+            if (!state.userExists) {
+                showToast("こちらをクリックして初期設定を完了させてください", "setup");
+            }
+
             syncHeaderStatus(); updateDateDisplay(); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); 
             setTimeout(renderHistory, 10);
             if (forceExpand) { var el = document.getElementById('calendar-expansion'); if (!el.classList.contains('open')) toggleCalendar(); }
@@ -628,6 +667,10 @@
             document.getElementById('view-registration').classList.remove('hidden'); 
             document.getElementById('sticky-registration-bar').classList.remove('hidden');
             document.getElementById('calendar-separator').classList.remove('hidden');
+            
+            // 設定画面に遷移した場合は（既に表示されているなら）トーストを消す
+            hideToast();
+
             syncHeaderStatus();
             if (state.userSetting) { state.selectedRegBase = state.userSetting.base; updateRegUI(true); } 
             else { state.selectedRegBase = null; state.isRegLocked = false; updateRegUI(); }
@@ -639,6 +682,12 @@
             document.getElementById('view-description').classList.remove('hidden');
             document.getElementById('sticky-description-bar').classList.remove('hidden');
             document.getElementById('calendar-separator').classList.remove('hidden');
+            
+            // アプリ説明画面に遷移しても設定未完了ならトーストを表示維持
+            if (!state.userExists) {
+                showToast("こちらをクリックして初期設定を完了させてください", "setup");
+            }
+
             syncHeaderStatus();
         }
 
@@ -834,12 +883,63 @@
         }
 
         function renderHistory() {
-            var listCont = document.getElementById('history-list'), curRoomId = String(state.userSetting?.roomId || "").trim(), dayData = state.registeredData[state.selectedDate]?.[curRoomId];
-            if (!dayData || !dayData.logs || dayData.logs.length === 0) { listCont.innerHTML = '<div class="text-center py-4 text-slate-400 text-sm font-bold">この日の登録データはありません</div>'; return; }
-            var sortedLogs = [...dayData.logs].sort((a, b) => b.time.localeCompare(a.time)), html = '<div class="flex flex-col gap-3">';
-            sortedLogs.forEach(log => {
-                var disp = "---"; if (log.time) { var pts = log.time.split(' '); disp = pts.length >= 2 ? pts[0].split(/\/|-/).slice(1).join('/') + ' ' + pts[1].slice(0, 5) : log.time; }
-                html += `<div class="bg-white p-3 rounded-xl border-2 border-slate-100 shadow-sm flex flex-col gap-2"><div class="flex justify-between items-center"><div class="flex items-center gap-2"><span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded tracking-tighter">${disp}</span><span class="text-sm font-bold text-slate-800">${log.catName}</span></div><div class="flex items-baseline gap-0.5"><span class="text-lg font-black text-slate-900">${log.val.toFixed(1)}</span><span class="text-[10px] font-bold text-slate-400 uppercase">Kg</span></div></div><div class="flex items-center gap-1.5 pt-1 border-t border-slate-50"><i class="fas fa-user text-[9px] text-slate-300"></i><span class="text-[10px] font-bold text-slate-400 truncate flex-1">${log.user}</span></div></div>`;
+            var btn = document.getElementById('btn-toggle-history'), btnText = btn.querySelector('span'), btnIcon = document.getElementById('history-icon');
+            var exp = document.getElementById('history-expansion'), listCont = document.getElementById('history-list');
+            var curRoomId = String(state.userSetting?.roomId || "").trim(), dayData = state.registeredData[state.selectedDate]?.[curRoomId];
+            
+            if (!dayData || !dayData.logs || dayData.logs.length === 0) { 
+                btnText.innerText = "履歴なし";
+                btn.classList.add('opacity-50', 'pointer-events-none');
+                exp.classList.remove('open');
+                btnIcon.className = "fas fa-chevron-down text-[10px]";
+                listCont.innerHTML = '<div class="flex flex-col items-center py-8 opacity-40"><i class="fas fa-folder-open text-3xl mb-2"></i><span class="text-sm font-bold">この日の登録データはありません</span></div>'; 
+                return; 
+            }
+
+            // 履歴がある場合
+            btn.classList.remove('opacity-50', 'pointer-events-none');
+            if (exp.classList.contains('open')) {
+                btnText.innerText = "履歴を閉じる";
+                btnIcon.className = "fas fa-chevron-up text-[10px]";
+            } else {
+                btnText.innerText = "履歴を表示する";
+                btnIcon.className = "fas fa-chevron-down text-[10px]";
+            }
+
+            var sortedLogs = [...dayData.logs].sort((a, b) => b.time.localeCompare(a.time));
+            var html = '<div class="space-y-0 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100">';
+            sortedLogs.forEach((log, idx) => {
+                var timeStr = "---"; 
+                if (log.time) { 
+                    var pts = log.time.split(' '); 
+                    timeStr = pts.length >= 2 ? pts[1].slice(0, 5) : log.time; 
+                }
+                var userDisp = log.user ? log.user.split('@')[0] : '自分';
+                
+                html += `
+                <div class="relative pl-8 pb-5 last:pb-0 group">
+                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-emerald-500 flex items-center justify-center z-10 shadow-sm transition-transform group-active:scale-90">
+                        <i class="fas fa-check text-[10px] text-emerald-600"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center mb-0.5">
+                            <span class="text-[12px] font-black text-slate-400 tracking-tight">${timeStr}</span>
+                            <div class="flex items-baseline gap-0.5">
+                                <span class="text-base font-black text-slate-800">${log.val.toFixed(1)}</span>
+                                <span class="text-[9px] font-bold text-slate-400 uppercase">Kg</span>
+                            </div>
+                        </div>
+                        <div class="bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm">
+                            <div class="flex justify-between items-center gap-2">
+                                <span class="text-sm font-bold text-slate-700 truncate">${log.catName}</span>
+                                <div class="flex items-center gap-1 max-w-[100px]">
+                                    <i class="fas fa-user text-[9px] text-slate-300"></i>
+                                    <span class="text-[9px] font-medium text-slate-400 truncate">${userDisp}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
             });
             listCont.innerHTML = html + '</div>';
         }
@@ -922,7 +1022,7 @@
             var dots = document.getElementById('room-dots-container'); if (dots) dots.innerHTML = state.roomsInDept.map((r, i) => `<div class="h-1.5 rounded-full transition-all duration-300 ${i === state.activeRoomIndex ? 'w-4 bg-emerald-600' : 'w-1.5 bg-slate-200'}"></div>`).join('');
             var reg = state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {};
             cont.innerHTML = state.categories.filter(c => isCategoryAllowed(c, myB)).map(c => {
-                var orig = reg[c.id] || 0, cur = (correctionValues[c.id] !== undefined ? correctionValues[c.id] : orig) + (inputValues[c.id] || 0), diff = cur - orig, isP = Math.abs(diff) >= 0.01;
+                var orig = reg[c.id] || 0, vCorr = correctionValues[c.id] !== undefined ? correctionValues[c.id] : orig, vIn = inputValues[c.id] || 0, cur = vCorr + vIn, diff = cur - orig, isP = Math.abs(diff) >= 0.01;
                 return `<div class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all overflow-hidden ${isP ? "border-2 border-orange-500 bg-orange-50/20" : (cur > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border-2 border-slate-200 bg-white")}" onclick="openSlider('${c.id}', '${c.name}')">${c.detail ? `<div id="tooltip-${c.id}" class="absolute inset-3 bg-slate-900/90 text-white rounded-lg flex items-center justify-center p-2 opacity-0 invisible transition-all duration-200 z-10 pointer-events-none text-center"><p class="text-[12px] leading-snug font-medium">${c.detail}</p></div>` : ''}<div><div class="flex items-center justify-between gap-1"><div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1 pr-1">${c.name}</div>${c.detail ? `<div class="cursor-help flex items-center" onclick="showTooltip('${c.id}', event)"><i class="fa-solid fa-circle-info text-slate-300 text-[15px]"></i></div>` : ''}</div><div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div></div><div class="flex flex-col items-end pb-1.5 relative"><div class="absolute bottom-full right-6 mb-0.5 whitespace-nowrap">${isP ? `<span class="text-sm font-black ${diff > 0 ? "text-orange-500" : "text-blue-500"} leading-none">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</span>` : ''}</div><div class="flex items-baseline gap-1"><div class="text-3xl font-black text-[#1e293b] leading-none">${cur.toLocaleString(undefined,{minimumFractionDigits:1})}</div><div class="text-xs font-bold text-slate-500">Kg</div></div></div></div>`;
             }).join('');
         }
@@ -934,7 +1034,7 @@
             for (var d of dates) {
                 var pending = state.pendingChanges[d], reg = state.registeredData[d]?.[curR]?.cats || {};
                 var items = state.categories.filter(c => isCategoryAllowed(c, myB)).map(c => {
-                    var o = reg[c.id] || 0, v = (pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : o) + (pending.inputs[c.id] || 0);
+                    var o = reg[c.id] || 0, vCorr = pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : o, vIn = pending.inputs[c.id] || 0, v = vCorr + vIn;
                     return Math.abs(v - o) >= 0.01 ? { categoryId: c.id, categoryName: c.name, value: v.toFixed(1) } : null;
                 }).filter(x => x !== null);
                 if (items.length > 0) {
