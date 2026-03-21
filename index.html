@@ -191,7 +191,7 @@
                             <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
                             <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
                         </div>
-                        <div id="slider-cat-detail" class="hidden mt-4 w-full py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] leading-relaxed shadow-inner"></div>
+                        <div id="slider-cat-detail" class="hidden mt-4 w-full py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] font-medium leading-relaxed shadow-inner"></div>
                         <div class="flex items-center gap-1.5 text-slate-500 mt-1">
                             <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
                             <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
@@ -455,11 +455,12 @@
             window.google = { script: { run: { 
                 withSuccessHandler: function(cb) { this._s = cb; return this; }, 
                 registerUserSetting: function() { setTimeout(() => { if(this._s) this._s({success:true}); }, 500); }, 
-                executeSaveReport: function() { setTimeout(() => { if(this._s) this._s({success:true, user: 'デモユーザー', time: '2024/02/20 10:00:00'}); }, 500); } 
+                executeSaveReport: function() { setTimeout(() => { if(this._s) this._s({success:true, user: 'デモユーザー', time: '2024/02/20 10:00:00'}); }, 500); },
+                getPastWasteData: function(y, m) { setTimeout(() => { if(this._s) this._s({}); }, 300); }
             } } }; 
         }
 
-        var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "", userName: "", currentToastType: null };
+        var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "", userName: "", currentToastType: null, loadedMonths: [] };
         var inputValues = {}; var correctionValues = {};
         var calendarViewDate = new Date(); var activeSliderCatId = null;
         var iconTimer = null; 
@@ -477,103 +478,57 @@
                 if (!userEmail || userEmail.indexOf('<' + '?') === 0) userEmail = "demo@mipox.co.jp";
                 
                 var decoded;
-                if (!rawPayload || rawPayload.indexOf('<' + '?') === 0 || rawPayload === "undefined" || rawPayload === "") { 
-                    decoded = getDemoData(); 
-                } else {
-                    try { decoded = JSON.parse(rawPayload); } catch(e) { decoded = getDemoData(); }
-                }
+                if (!rawPayload || rawPayload.indexOf('<' + '?') === 0 || rawPayload === "undefined" || rawPayload === "") { decoded = getDemoData(); } else { try { decoded = JSON.parse(rawPayload); } catch(e) { decoded = getDemoData(); } }
                 Object.assign(state, decoded); 
                 state.serverTime = decoded.serverTime || Date.now(); 
                 calendarViewDate = new Date(state.serverTime);
+                
+                // 初回読み込み済みの月をマーク（現在月と過去2ヶ月）
+                var now = new Date(state.serverTime);
+                for(var i=0; i<3; i++) {
+                    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    state.loadedMonths.push(d.getFullYear() + "-" + (d.getMonth() + 1));
+                }
+
                 setToday(false);
                 if (state.userExists && state.userSetting?.roomId) {
-                    state.isRegLocked = true;
-                    initRoomNavigation();
-                    showMainView();
+                    state.isRegLocked = true; initRoomNavigation(); showMainView();
                 } else {
-                    state.isRegLocked = false;
-                    showMainView();
-                    showToast("こちらをクリックして初期設定を完了させてください", "setup");
+                    state.isRegLocked = false; showMainView(); showToast("こちらをクリックして初期設定を完了させてください", "setup");
                 }
                 document.getElementById('display-user-email').innerText = userEmail;
                 document.getElementById('display-user-name').innerText = state.userName || (userEmail ? userEmail.split('@')[0] : "未登録ユーザー");
                 document.getElementById('global-user-avatar').src = "https://ui-avatars.com/api/?background=2563eb&color=fff&bold=true&name=" + encodeURIComponent(state.userName || userEmail);
-                setTimeout(() => {
-                    document.getElementById('loader').style.display = 'none'; 
-                    document.getElementById('app-content').classList.remove('hidden');
-                }, 100);
-                initEventListeners();
-                initSwipeSupport();
+                setTimeout(() => { document.getElementById('loader').style.display = 'none'; document.getElementById('app-content').classList.remove('hidden'); }, 100);
+                initEventListeners(); initSwipeSupport();
             } catch (e) { document.getElementById('loader').style.display = 'none'; }
         }
 
-        function isCategoryAllowed(cat, base) {
-            if (!cat.targetBase || cat.targetBase.trim() === "") return true; 
-            if (!base) return false;
-            const targets = cat.targetBase.split(',').map(t => t.trim().toUpperCase());
-            return targets.includes(base.trim().toUpperCase());
-        }
+        function isCategoryAllowed(cat, base) { if (!cat.targetBase || cat.targetBase.trim() === "") return true; if (!base) return false; const targets = cat.targetBase.split(',').map(t => t.trim().toUpperCase()); return targets.includes(base.trim().toUpperCase()); }
 
         function showTooltip(id, e) {
             if (e) e.stopPropagation();
-            const el = document.getElementById(`tooltip-${id}`);
-            if (!el) return;
-            document.querySelectorAll('[id^="tooltip-"]').forEach(t => {
-                if (t.id !== `tooltip-${id}`) {
-                    t.classList.add('invisible', 'opacity-0'); t.classList.remove('visible', 'opacity-100');
-                }
-            });
-            el.classList.remove('invisible', 'opacity-0');
-            el.classList.add('visible', 'opacity-100');
+            const el = document.getElementById(`tooltip-${id}`); if (!el) return;
+            document.querySelectorAll('[id^="tooltip-"]').forEach(t => { if (t.id !== `tooltip-${id}`) { t.classList.add('invisible', 'opacity-0'); t.classList.remove('visible', 'opacity-100'); } });
+            el.classList.remove('invisible', 'opacity-0'); el.classList.add('visible', 'opacity-100');
             if (tooltipTimers[id]) clearTimeout(tooltipTimers[id]);
-            tooltipTimers[id] = setTimeout(() => {
-                el.classList.add('invisible', 'opacity-0'); el.classList.remove('visible', 'opacity-100');
-            }, 3000);
+            tooltipTimers[id] = setTimeout(() => { el.classList.add('invisible', 'opacity-0'); el.classList.remove('visible', 'opacity-100'); }, 3000);
         }
 
-        function getDemoData() {
-            return {
-                userExists: false,
-                userName: "ゲストユーザー",
-                locations: [
-                    { id: "1", name: "CR1", dept: "B01", base: "HP" },
-                    { id: "1-2", name: "CR2", dept: "B01", base: "HP" },
-                    { id: "2", name: "検査室", dept: "B04", base: "HP" },
-                    { id: "28", name: "事務所", dept: "11B", base: "KP" },
-                    { id: "kp-1-2", name: "プレス1号機", dept: "11B", base: "KP" },
-                    { id: "13", name: "防水エリア", dept: "製造一課", base: "FP" },
-                    { id: "14", name: "調合エリア", dept: "製造一課", base: "FP" }
-                ],
-                categories: [
-                    { id: "1", name: "普通ごみ", targetBase: "HP", detail: "一般ごみ" },
-                    { id: "2", name: "木くず", targetBase: "HP", detail: "木屑" },
-                    { id: "13", name: "廃液", targetBase: "FP", detail: "製造廃液" },
-                    { id: "18", name: "可燃ごみ", targetBase: "KP", detail: "可燃ごみ全般" }
-                ],
-                feedbackUrl: "",
-                registeredData: {}, serverTime: Date.now()
-            };
-        }
+        function getDemoData() { return { userExists: false, userName: "ゲストユーザー", locations: [{ id: "1", name: "CR1", dept: "B01", base: "HP" }], categories: [{ id: "1", name: "普通ごみ", targetBase: "HP", detail: "一般ごみ" }], feedbackUrl: "", registeredData: {}, serverTime: Date.now() }; }
 
         function initRoomNavigation() {
             if (!state.userSetting?.roomId) return;
             var curRoomId = String(state.userSetting.roomId).trim();
-            var curRoom = state.locations.find(l => String(l.id).trim() === curRoomId);
-            if (!curRoom) return;
+            var curRoom = state.locations.find(l => String(l.id).trim() === curRoomId); if (!curRoom) return;
             state.roomsInDept = state.locations.filter(l => l.dept.trim() === curRoom.dept.trim() && l.base.trim() === curRoom.base.trim());
             state.activeRoomIndex = state.roomsInDept.findIndex(l => String(l.id).trim() === curRoomId);
         }
 
         function initEventListeners() {
             var trigger = document.getElementById('app-icon-trigger');
-            var startHandler = function(e) { 
-                if (activeSliderCatId) return;
-                iconTimer = setTimeout(() => { iconTimer = null; if (checkUnsavedChanges()) showRegistrationView(); }, 600); 
-            };
-            var endHandler = function(e) { 
-                if (activeSliderCatId) return;
-                if (iconTimer) { clearTimeout(iconTimer); iconTimer = null; if (checkUnsavedChanges()) showDescriptionView(); } 
-            };
+            var startHandler = function(e) { if (activeSliderCatId) return; iconTimer = setTimeout(() => { iconTimer = null; if (checkUnsavedChanges()) showRegistrationView(); }, 600); };
+            var endHandler = function(e) { if (activeSliderCatId) return; if (iconTimer) { clearTimeout(iconTimer); iconTimer = null; if (checkUnsavedChanges()) showDescriptionView(); } };
             trigger.addEventListener('mousedown', startHandler); trigger.addEventListener('mouseup', endHandler);
             trigger.addEventListener('touchstart', startHandler, {passive: true}); trigger.addEventListener('touchend', endHandler, {passive: true});
             document.getElementById('btn-avatar').addEventListener('click', function() { if (activeSliderCatId) return; if (checkUnsavedChanges()) showRegistrationView(); });
@@ -590,34 +545,17 @@
         }
 
         function showToast(m, type = 'success') { 
-            if (toastTimer) clearTimeout(toastTimer);
-            state.currentToastType = type;
+            if (toastTimer) clearTimeout(toastTimer); state.currentToastType = type;
             var t = document.getElementById('toast'), tx = document.getElementById('toast-text'), ti = document.getElementById('toast-icon'); 
             t.classList.remove('visible', 'toast-bottom', 'toast-top');
-            if (type === 'warning') { 
-                ti.className = "fas fa-exclamation-triangle text-orange-400 text-2xl"; 
-                tx.innerHTML = m || "未報告のデータがあります<br>先に報告をしてください";
-                t.classList.add('toast-top');
-            } else if (type === 'setup') {
-                ti.className = "fas fa-triangle-exclamation text-orange-400 text-2xl";
-                tx.innerHTML = m;
-                t.classList.add('toast-bottom');
-            } else {
-                ti.className = (type === 'info') ? "fas fa-circle-info text-blue-400 text-2xl" : ((type === 'reset') ? "fas fa-rotate-left text-slate-400 text-2xl" : "fas fa-check-circle text-emerald-400 text-2xl");
-                tx.innerHTML = m; t.classList.add('toast-bottom');
-            }
+            if (type === 'warning') { ti.className = "fas fa-exclamation-triangle text-orange-400 text-2xl"; tx.innerHTML = m || "未報告のデータがあります<br>先に報告をしてください"; t.classList.add('toast-top');
+            } else if (type === 'setup') { ti.className = "fas fa-triangle-exclamation text-orange-400 text-2xl"; tx.innerHTML = m; t.classList.add('toast-bottom');
+            } else { ti.className = (type === 'info') ? "fas fa-circle-info text-blue-400 text-2xl" : ((type === 'reset') ? "fas fa-rotate-left text-slate-400 text-2xl" : "fas fa-check-circle text-emerald-400 text-2xl"); tx.innerHTML = m; t.classList.add('toast-bottom'); }
             setTimeout(() => t.classList.add('visible'), 50);
-            if (type !== 'setup') {
-                toastTimer = setTimeout(hideToast, (type === 'warning' || type === 'info' || type === 'reset') ? 3500 : 2500); 
-            }
+            if (type !== 'setup' && type !== 'loading') { toastTimer = setTimeout(hideToast, (type === 'warning' || type === 'info' || type === 'reset') ? 3500 : 2500); }
         }
 
-        function onToastClick() {
-            if (state.currentToastType === 'setup') {
-                showRegistrationView();
-            }
-            hideToast();
-        }
+        function onToastClick() { if (state.currentToastType === 'setup') { showRegistrationView(); } hideToast(); }
 
         function hideToast() { var t = document.getElementById('toast'); t.classList.remove('visible'); if (toastTimer) clearTimeout(toastTimer); state.currentToastType = null; }
 
@@ -632,103 +570,63 @@
         }
 
         function showMainView(forceExpand = false) { 
-            document.getElementById('app-body').classList.add('is-main-view');
-            hideAllViews();
-            document.getElementById('view-main').classList.remove('hidden'); 
-            document.getElementById('view-main-sticky').classList.remove('hidden'); 
-            document.getElementById('sticky-calendar-bar').classList.remove('hidden');
-            document.getElementById('calendar-separator').classList.remove('hidden');
-            
-            var calBar = document.getElementById('sticky-calendar-bar');
-            var calExp = document.getElementById('calendar-expansion');
-            if (calBar) calBar.classList.toggle('disabled-calendar', !state.userExists);
-            if (calExp) calExp.classList.toggle('disabled-calendar', !state.userExists);
-
-            var histCont = document.getElementById('main-history-container');
-            if (histCont) histCont.classList.toggle('hidden', !state.userExists);
-
-            if (!state.userExists) {
-                showToast("こちらをクリックして初期設定を完了させてください", "setup");
-            }
-
+            document.getElementById('app-body').classList.add('is-main-view'); hideAllViews();
+            document.getElementById('view-main').classList.remove('hidden'); document.getElementById('view-main-sticky').classList.remove('hidden'); 
+            document.getElementById('sticky-calendar-bar').classList.remove('hidden'); document.getElementById('calendar-separator').classList.remove('hidden');
+            var calBar = document.getElementById('sticky-calendar-bar'); var calExp = document.getElementById('calendar-expansion');
+            if (calBar) calBar.classList.toggle('disabled-calendar', !state.userExists); if (calExp) calExp.classList.toggle('disabled-calendar', !state.userExists);
+            var histCont = document.getElementById('main-history-container'); if (histCont) histCont.classList.toggle('hidden', !state.userExists);
+            if (!state.userExists) { showToast("こちらをクリックして初期設定を完了させてください", "setup"); }
             syncHeaderStatus(); updateDateDisplay(); renderCategoryCards(); renderCalendar(); updateFooterVisibility(); 
             setTimeout(renderHistory, 10);
             if (forceExpand) { var el = document.getElementById('calendar-expansion'); if (!el.classList.contains('open')) toggleCalendar(); }
         }
 
         function showRegistrationView() { 
-            document.getElementById('app-body').classList.remove('is-main-view');
-            hideAllViews();
-            document.getElementById('view-registration').classList.remove('hidden'); 
-            document.getElementById('sticky-registration-bar').classList.remove('hidden');
-            document.getElementById('calendar-separator').classList.remove('hidden');
-            hideToast();
-
-            syncHeaderStatus();
-            if (state.userSetting) { state.selectedRegBase = state.userSetting.base; updateRegUI(true); } 
-            else { state.selectedRegBase = null; state.isRegLocked = false; updateRegUI(); }
+            document.getElementById('app-body').classList.remove('is-main-view'); hideAllViews();
+            document.getElementById('view-registration').classList.remove('hidden'); document.getElementById('sticky-registration-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden'); hideToast(); syncHeaderStatus();
+            if (state.userSetting) { state.selectedRegBase = state.userSetting.base; updateRegUI(true); } else { state.selectedRegBase = null; state.isRegLocked = false; updateRegUI(); }
         }
 
         function showDescriptionView() {
-            document.getElementById('app-body').classList.remove('is-main-view');
-            hideAllViews();
-            document.getElementById('view-description').classList.remove('hidden');
-            document.getElementById('sticky-description-bar').classList.remove('hidden');
-            document.getElementById('calendar-separator').classList.remove('hidden');
-            if (!state.userExists) {
-                showToast("こちらをクリックして初期設定を完了させてください", "setup");
-            }
-            syncHeaderStatus();
+            document.getElementById('app-body').classList.remove('is-main-view'); hideAllViews();
+            document.getElementById('view-description').classList.remove('hidden'); document.getElementById('sticky-description-bar').classList.remove('hidden');
+            document.getElementById('calendar-separator').classList.remove('hidden'); if (!state.userExists) { showToast("こちらをクリックして初期設定を完了させてください", "setup"); } syncHeaderStatus();
         }
 
         function hideAllViews() {
             ['view-main', 'view-main-sticky', 'view-registration', 'view-description', 'sticky-calendar-bar', 'sticky-registration-bar', 'sticky-description-bar', 'header-status-bar', 'calendar-separator', 'footer-actions'].forEach(id => {
-                var el = document.getElementById(id);
-                if (el) { 
-                    if (id.startsWith('view') || id.startsWith('sticky')) el.classList.add('hidden'); 
-                    else el.style.display = 'none'; 
-                }
+                var el = document.getElementById(id); if (el) { if (id.startsWith('view') || id.startsWith('sticky')) el.classList.add('hidden'); else el.style.display = 'none'; }
             });
         }
 
         function updateRegUI(isInit = false) {
-            var b = state.selectedRegBase ? state.selectedRegBase.trim() : null;
-            var isLocked = state.isRegLocked;
-            var btnBack = document.getElementById('btn-reg-back');
-            btnBack.disabled = !state.userExists || !isLocked;
-            var badge = document.getElementById('lock-badge');
+            var b = state.selectedRegBase ? state.selectedRegBase.trim() : null; var isLocked = state.isRegLocked; var btnBack = document.getElementById('btn-reg-back');
+            btnBack.disabled = !state.userExists || !isLocked; var badge = document.getElementById('lock-badge');
             badge.innerText = isLocked ? "LOCKED" : "UNLOCKED";
             badge.className = isLocked ? "absolute left-0 px-2 py-1 bg-slate-200 text-slate-500 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent" : "absolute left-0 px-2 py-1 bg-emerald-50 text-emerald-900 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm today-striped border border-emerald-100 z-10";
             ['KP', 'HP', 'FP'].forEach(id => { 
                 var el = document.getElementById(`base-${id}`);
                 if (el) {
-                    if (id.toUpperCase() === (b || "").toUpperCase()) {
-                        el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-slate-200 border-none font-black text-xl text-slate-500 flex items-center justify-center cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-emerald-600 border-none font-black text-xl text-white flex items-center justify-center shadow-lg transform scale-105 transition-transform";
-                    } else {
-                        el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-white border-none font-black text-xl text-slate-400 flex items-center justify-center opacity-40 cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-white border border-slate-200 font-black text-xl text-slate-400 flex items-center justify-center transition-all";
-                    }
+                    if (id.toUpperCase() === (b || "").toUpperCase()) { el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-slate-200 border-none font-black text-xl text-slate-500 flex items-center justify-center cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-emerald-600 border-none font-black text-xl text-white flex items-center justify-center shadow-lg transform scale-105 transition-transform";
+                    } else { el.className = isLocked ? "btn-base-select h-12 rounded-xl bg-white border-none font-black text-xl text-slate-400 flex items-center justify-center opacity-40 cursor-not-allowed" : "btn-base-select h-12 rounded-xl bg-white border border-slate-200 font-black text-xl text-slate-400 flex items-center justify-center transition-all"; }
                 }
             });
             var dSel = document.getElementById('reg-dept-select'), rSel = document.getElementById('reg-room-select');
             dSel.disabled = isLocked || !b; rSel.disabled = isLocked || !dSel.value;
-            if (!b) { 
-                dSel.innerHTML = '<option value="">未選択</option>'; rSel.innerHTML = '<option value="">未選択</option>'; 
+            if (!b) { dSel.innerHTML = '<option value="">未選択</option>'; rSel.innerHTML = '<option value="">未選択</option>'; 
             } else {
                 var depts = [...new Set(state.locations.filter(l => l.base.trim().toUpperCase() === b.toUpperCase()).map(l => (l.dept || "未分類").trim()))]; 
                 dSel.innerHTML = '<option value="">選択してください</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
-                if (isInit && state.userSetting) { 
-                    var curRoomId = String(state.userSetting.roomId).trim();
-                    var cur = state.locations.find(l => String(l.id).trim() === curRoomId); 
-                    if (cur) { dSel.value = cur.dept.trim(); onRegDeptChange(true); } 
-                }
+                if (isInit && state.userSetting) { var curRoomId = String(state.userSetting.roomId).trim(); var cur = state.locations.find(l => String(l.id).trim() === curRoomId); if (cur) { dSel.value = cur.dept.trim(); onRegDeptChange(true); } }
             }
             renderRegistrationFooter();
         }
 
         function renderRegistrationFooter() {
             var cont = document.getElementById('reg-footer-actions');
-            if (state.isRegLocked) {
-                cont.innerHTML = `<button onclick=\"unlockReg()\" class=\"btn-action btn-dark font-bold\"><i class=\"fas fa-unlock mr-2\"></i>ロックを解除</button>`;
+            if (state.isRegLocked) { cont.innerHTML = `<button onclick=\"unlockReg()\" class=\"btn-action btn-dark font-bold\"><i class=\"fas fa-unlock mr-2\"></i>ロックを解除</button>`;
             } else {
                 var b = state.selectedRegBase, d = document.getElementById('reg-dept-select').value, r = document.getElementById('reg-room-select').value;
                 var isValid = b && (d !== "" && d !== "選択してください") && (r !== "" && r !== "選択してください");
@@ -737,13 +635,11 @@
         }
 
         function unlockReg() { state.isRegLocked = false; document.getElementById('reg-dept-select').value = ""; document.getElementById('reg-room-select').value = ""; updateRegUI(); }
-
         function regSelectBase(b) { if(state.isRegLocked) return; state.selectedRegBase = b.trim(); document.getElementById('reg-dept-select').value = ""; document.getElementById('reg-room-select').value = ""; updateRegUI(); }
 
         function onRegDeptChange(isInit = false) { 
             var b = state.selectedRegBase?.trim(), d = document.getElementById('reg-dept-select').value, rSel = document.getElementById('reg-room-select'); 
-            if (!d || d === "" || d === "選択してください" || !b) { 
-                rSel.disabled = true; rSel.innerHTML = '<option value="">未選択</option>'; 
+            if (!d || d === "" || d === "選択してください" || !b) { rSel.disabled = true; rSel.innerHTML = '<option value="">未選択</option>'; 
             } else { 
                 rSel.disabled = state.isRegLocked; 
                 var rms = state.locations.filter(l => l.base.trim().toUpperCase() === b.toUpperCase() && (l.dept || "未分類").trim() === d.trim()); 
@@ -760,12 +656,8 @@
             if (!rId || !b) return;
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch animate-spin mr-2"></i><span>保存中...</span>'; }
             google.script.run.withSuccessHandler(function(res) { 
-                if (res && res.success) {
-                    state.userSetting = { base: b, roomId: rId }; state.userExists = true; state.isRegLocked = true;
-                    initRoomNavigation(); syncHeaderStatus(); showMainView(true); showToast("設定を保存しました", "success"); 
-                } else { 
-                    showToast("保存失敗", "warning"); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock mr-2"></i>この設定で保存する'; }
-                }
+                if (res && res.success) { state.userSetting = { base: b, roomId: rId }; state.userExists = true; state.isRegLocked = true; initRoomNavigation(); syncHeaderStatus(); showMainView(true); showToast("設定を保存しました", "success"); 
+                } else { showToast("保存失敗", "warning"); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock mr-2"></i>この設定で保存する'; } }
             }).registerUserSetting(b, rId); 
         }
 
@@ -806,9 +698,7 @@
         }
 
         function onManualInput(v) { var n = parseFloat(v); if (!isNaN(n)) { if (n < 0) { n = 0; document.getElementById('manual-input-field').value = "0.0"; } document.getElementById('input-slider').value = Math.min(100, n); updateValues(n); } else updateValues(0); }
-
         function onSliderInput(v) { var n = parseFloat(v), isReg = document.getElementById('edit-lock-toggle').checked; document.getElementById(isReg ? 'registered-val-field' : 'manual-input-field').value = n.toFixed(1); if (isReg) onRegisteredValChange(n); else onManualInput(n); }
-
         function onRegisteredValChange(v) { var n = parseFloat(v); if (!isNaN(n) && activeSliderCatId) { correctionValues[activeSliderCatId] = n; saveCurrentToCache(); renderCategoryCards(); updateFooterVisibility(); updateSliderButtonState(); document.getElementById('input-slider').value = Math.min(100, n); } }
 
         function toggleEditLock(checked) { 
@@ -845,67 +735,36 @@
         }
 
         function updateFooterVisibility() { document.getElementById('footer-actions').style.display = Object.keys(state.pendingChanges).length > 0 ? 'block' : 'none'; }
-        
         function clearChanges() { if (Object.keys(state.pendingChanges).length === 0) return; state.pendingChanges = {}; inputValues = {}; correctionValues = {}; renderCategoryCards(); renderCalendar(); updateFooterVisibility(); renderHistory(); showToast("入力をクリアしました", "reset"); }
 
         function toggleCalendar(silent = false) { 
             var el = document.getElementById('calendar-expansion'), icon = document.getElementById('cal-toggle-icon'); 
             el.classList.toggle('open'); icon.style.transform = el.classList.contains('open') ? 'rotate(0deg)' : 'rotate(180deg)'; 
-            if (silent) {
-                var c = document.getElementById('cal-toggle-icon-container'); c.classList.add('!bg-emerald-600', '!text-white');
-                setTimeout(() => c.classList.remove('!bg-emerald-600', '!text-white'), 200);
-            }
+            if (silent) { var c = document.getElementById('cal-toggle-icon-container'); c.classList.add('!bg-emerald-600', '!text-white'); setTimeout(() => c.classList.remove('!bg-emerald-600', '!text-white'), 200); }
             renderCalendar(); 
         }
 
         function toggleHistory() {
-            var el = document.getElementById('history-expansion');
-            var icon = document.getElementById('history-icon');
-            var btnText = document.querySelector('#btn-toggle-history span');
+            var el = document.getElementById('history-expansion'), icon = document.getElementById('history-icon'), btnText = document.querySelector('#btn-toggle-history span');
             el.classList.toggle('open');
-            if (el.classList.contains('open')) {
-                icon.className = "fas fa-chevron-up text-[10px]";
-                btnText.innerText = "履歴を閉じる";
-            } else {
-                icon.className = "fas fa-chevron-down text-[10px]";
-                btnText.innerText = "履歴を表示する";
-            }
+            if (el.classList.contains('open')) { icon.className = "fas fa-chevron-up text-[10px]"; btnText.innerText = "履歴を閉じる"; } else { icon.className = "fas fa-chevron-down text-[10px]"; btnText.innerText = "履歴を表示する"; }
         }
 
         function renderHistory() {
             var btn = document.getElementById('btn-toggle-history'), btnText = btn.querySelector('span'), btnIcon = document.getElementById('history-icon');
             var exp = document.getElementById('history-expansion'), listCont = document.getElementById('history-list');
             var curRoomId = String(state.userSetting?.roomId || "").trim(), dayData = state.registeredData[state.selectedDate]?.[curRoomId];
-            
             if (!dayData || !dayData.logs || dayData.logs.length === 0) { 
-                btnText.innerText = "履歴なし";
-                btn.classList.add('opacity-50', 'pointer-events-none');
-                exp.classList.remove('open');
-                btnIcon.className = "fas fa-chevron-down text-[10px]";
-                listCont.innerHTML = '<div class="flex flex-col items-center py-8 opacity-40"><i class="fas fa-folder-open text-3xl mb-2"></i><span class="text-sm font-bold">この日の登録データはありません</span></div>'; 
-                return; 
+                btnText.innerText = "履歴なし"; btn.classList.add('opacity-50', 'pointer-events-none'); exp.classList.remove('open'); btnIcon.className = "fas fa-chevron-down text-[10px]";
+                listCont.innerHTML = '<div class="flex flex-col items-center py-8 opacity-40"><i class="fas fa-folder-open text-3xl mb-2"></i><span class="text-sm font-bold">この日の登録データはありません</span></div>'; return; 
             }
-
             btn.classList.remove('opacity-50', 'pointer-events-none');
-            if (exp.classList.contains('open')) {
-                btnText.innerText = "履歴を閉じる";
-                btnIcon.className = "fas fa-chevron-up text-[10px]";
-            } else {
-                btnText.innerText = "履歴を表示する";
-                btnIcon.className = "fas fa-chevron-down text-[10px]";
-            }
-
+            if (exp.classList.contains('open')) { btnText.innerText = "履歴を閉じる"; btnIcon.className = "fas fa-chevron-up text-[10px]"; } else { btnText.innerText = "履歴を表示する"; btnIcon.className = "fas fa-chevron-down text-[10px]"; }
             var sortedLogs = [...dayData.logs].sort((a, b) => b.time.localeCompare(a.time));
             var html = '<div class="space-y-0 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100">';
-            sortedLogs.forEach((log, idx) => {
-                var timeStr = "---"; 
-                if (log.time) { 
-                    var pts = log.time.split(' '); 
-                    timeStr = pts.length >= 2 ? pts[1].slice(0, 5) : log.time; 
-                }
-                // 表示用。メールアドレスなら@の前を、名簿シートから取得できていれば名前を表示
+            sortedLogs.forEach((log) => {
+                var timeStr = log.time ? (log.time.split(' ').length >= 2 ? log.time.split(' ')[1].slice(0, 5) : log.time) : "---";
                 var userDisp = log.user.includes('@') ? log.user.split('@')[0] : log.user;
-                
                 html += `
                 <div class="relative pl-8 pb-5 last:pb-0 group">
                     <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-emerald-500 flex items-center justify-center z-10 shadow-sm transition-transform group-active:scale-90">
@@ -938,7 +797,22 @@
             if (activeSliderCatId) return;
             var w = document.getElementById('calendar-slide-wrapper'); w.style.transition = 'transform 0.3s ease-out'; w.style.transform = n > 0 ? 'translateX(-100%)' : 'translateX(100%)';
             setTimeout(() => {
-                calendarViewDate.setMonth(calendarViewDate.getMonth() + n); renderCalendar(); w.style.transition = 'none'; w.style.transform = n > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+                calendarViewDate.setMonth(calendarViewDate.getMonth() + n);
+                w.style.transition = 'none'; w.style.transform = n > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+                
+                // 遅延読み込みチェック
+                var targetKey = calendarViewDate.getFullYear() + "-" + (calendarViewDate.getMonth() + 1);
+                if (!state.loadedMonths.includes(targetKey)) {
+                    showToast("過去データを取得中...", "loading");
+                    google.script.run.withSuccessHandler(function(pastData) {
+                        Object.assign(state.registeredData, pastData);
+                        state.loadedMonths.push(targetKey);
+                        hideToast();
+                        renderCalendar();
+                    }).getPastWasteData(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + 1);
+                }
+
+                renderCalendar();
                 setTimeout(() => { w.style.transition = 'transform 0.3s ease-out'; w.style.transform = 'translateX(0)'; }, 20);
             }, 300);
         }
@@ -973,31 +847,16 @@
                 var isS = state.selectedDate === ds, isT = ds === tStr, reg = state.registeredData[ds]?.[curRoomId], pending = state.pendingChanges[ds];
                 var col = (new Date(y, m, d).getDay() === 0) ? "text-sunday" : (new Date(y, m, d).getDay() === 6 ? "text-saturday" : "text-[#334155]");
                 var styleClass = "h-9 w-full rounded-lg font-black text-[13px] flex items-center justify-center transition-all relative bg-white " + (isS ? "text-emerald-700 " : "border border-transparent " + col);
-                
                 var valTextHtml = '';
                 if (pending) {
                     var diff = state.categories.filter(c => isCategoryAllowed(c, myB)).reduce((acc, c) => acc + ((pending.corrections[c.id] !== undefined ? pending.corrections[c.id] : (reg?.cats?.[c.id] || 0)) + (pending.inputs[c.id] || 0)), 0) - (reg ? reg.total : 0);
                     if (Math.abs(diff) >= 0.01) valTextHtml = `<div class="calendar-val-pending ${diff > 0 ? "text-pending-plus" : "text-pending-minus"}">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</div>`;
-                } else if (reg?.total > 0) {
-                    valTextHtml = `<div class="calendar-val">${reg.total.toFixed(1)}</div>`;
-                }
-
-                var inner = "absolute inset-0.5 rounded-lg pointer-events-none";
+                } else if (reg?.total > 0) { valTextHtml = `<div class="calendar-val">${reg.total.toFixed(1)}</div>`; }
                 var bgHtml = '';
-                if (reg) bgHtml += `<div class="${inner} bg-emerald-50"></div>`;
-                if (isT) bgHtml += `<div class="${inner} today-striped border-none"></div>`;
-                if (isS) bgHtml += `<div class="${inner} border-2 border-emerald-600 z-10"></div>`;
-                
-                var contentHtml = `
-                    <div class="relative z-20 flex flex-col items-center justify-center leading-none w-full">
-                        <div class="relative flex items-center justify-center h-4">
-                            <span>${d}</span>
-                            ${pending ? '<div class="absolute left-full ml-0.5 top-[1px] w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>' : ''}
-                        </div>
-                        ${valTextHtml}
-                    </div>
-                `;
-                
+                if (reg) bgHtml += `<div class="absolute inset-0.5 rounded-lg pointer-events-none bg-emerald-50"></div>`;
+                if (isT) bgHtml += `<div class="absolute inset-0.5 rounded-lg pointer-events-none today-striped border-none"></div>`;
+                if (isS) bgHtml += `<div class="absolute inset-0.5 rounded-lg pointer-events-none border-2 border-emerald-600 z-10"></div>`;
+                var contentHtml = `<div class="relative z-20 flex flex-col items-center justify-center leading-none w-full"><div class="relative flex items-center justify-center h-4"><span>${d}</span>${pending ? '<div class="absolute left-full ml-0.5 top-[1px] w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>' : ''}</div>${valTextHtml}</div>`;
                 grid.innerHTML += `<button id="cal-day-${ds}" class="${styleClass}">${bgHtml}${contentHtml}</button>`;
                 (function(dStr) { setTimeout(() => { var b = document.getElementById('cal-day-'+dStr); if(b) b.onclick = function(){ selectDateFromCal(dStr); }; }, 0); })(ds);
             }
