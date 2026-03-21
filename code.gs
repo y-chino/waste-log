@@ -1,5 +1,5 @@
 /**
- * 廃棄物報告アプリ - Backend Logic (v1.0.5 - Optimized)
+ * 廃棄物報告アプリ - Backend Logic (v1.0.5 - Auto-Registration Version)
  */
 
 var APP_TITLE = "廃棄物報告";
@@ -9,7 +9,8 @@ var SHEETS = {
   LOCATION: "Master_Location",
   USER_SETTING: "UserSetting",
   DATA: "WastesData",
-  CONFIG: "Config" 
+  CONFIG: "Config",
+  USER_MASTER: "Master_User"
 };
 
 /**
@@ -21,7 +22,6 @@ function doGet() {
   
   var initialData = getInitialDataForApp_(userEmail);
   
-  // 高速化案2: Base64エンコードを廃止し、直接JSONを渡す（エスケープ処理込み）
   template.initialPayload = JSON.stringify(initialData);
   template.userEmail = userEmail;
   
@@ -32,12 +32,118 @@ function doGet() {
 }
 
 /**
- * アプリ起動時の初期データを取得（高速化のため一括取得）
+ * 組織の全ユーザーを同期する（初期構築や一括更新用）
+ */
+function syncOrganizationUsers() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.USER_MASTER);
+  
+  // Admin SDK API が有効化されているかチェック
+  if (typeof AdminDirectory === 'undefined') {
+    var errorMsg = "エラー: Admin SDK API が有効化されていません。GASエディタの左メニュー「サービス」から「Admin SDK API」を追加してください。";
+    Logger.log(errorMsg);
+    return errorMsg;
+  }
+
+  // シートがなければ作成
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.USER_MASTER);
+    sheet.appendRow(["メールアドレス", "名前"]);
+    sheet.getRange("1:1").setFontWeight("bold").setBackground("#f3f3f3");
+    sheet.setFrozenRows(1);
+  }
+
+  var users = [];
+  var pageToken;
+  
+  try {
+    Logger.log("組織ユーザーの取得を開始します...");
+    do {
+      var response = AdminDirectory.Users.list({
+        customer: 'my_customer',
+        maxResults: 500,
+        pageToken: pageToken,
+        orderBy: 'email',
+        viewType: 'domain_public' 
+      });
+      
+      if (response.users && response.users.length > 0) {
+        response.users.forEach(function(user) {
+          users.push([user.primaryEmail.toLowerCase(), user.name.fullName]);
+        });
+      }
+      pageToken = response.nextPageToken;
+    } while (pageToken);
+
+    Logger.log("取得件数: " + users.length + " 件");
+
+    if (users.length > 0) {
+      var lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        sheet.getRange(2, 1, lastRow - 1, 2).clearContent();
+      }
+      sheet.getRange(2, 1, users.length, 2).setValues(users);
+      SpreadsheetApp.flush(); 
+      Logger.log("シートへの書き込みが完了しました。");
+      return "同期完了: " + users.length + " 名を登録しました。";
+    } else {
+      return "警告: 組織内にユーザーが見つかりませんでした。";
+    }
+  } catch (e) {
+    Logger.log("エラー発生: " + e.toString());
+    return "エラー: " + e.toString();
+  }
+}
+
+/**
+ * 名簿から名前を取得。見つからない場合は組織から取得してシートに自動追加する（新ユーザー対応）
+ */
+function getOrRegisterUserName_(email) {
+  if (!email) return null;
+  var lowEmail = email.toLowerCase();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.USER_MASTER);
+  
+  if (!sheet) {
+    var syncResult = syncOrganizationUsers();
+    if (syncResult.indexOf("エラー") === 0) return null;
+    sheet = ss.getSheetByName(SHEETS.USER_MASTER);
+  }
+  
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).toLowerCase() === lowEmail) {
+      return data[i][1];
+    }
+  }
+
+  // Admin SDK API が有効な場合のみ個別取得を試みる
+  if (typeof AdminDirectory !== 'undefined') {
+    try {
+      var user = AdminDirectory.Users.get(lowEmail);
+      if (user && user.name) {
+        var newName = user.name.fullName;
+        sheet.appendRow([lowEmail, newName]);
+        return newName;
+      }
+    } catch (e) {
+      console.warn("New user auto-registration failed: " + e.toString());
+    }
+  }
+  return null;
+}
+
+/**
+ * アプリ起動時の初期データを取得
  */
 function getInitialDataForApp_(userEmail) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // 1. カテゴリマスター取得
+  var userName = getOrRegisterUserName_(userEmail);
+  if (!userName && userEmail) {
+    userName = userEmail.split('@')[0];
+  }
+
   var catSheet = ss.getSheetByName(SHEETS.CATEGORY);
   var catData = catSheet.getDataRange().getValues();
   var categories = [];
@@ -50,7 +156,6 @@ function getInitialDataForApp_(userEmail) {
     });
   }
 
-  // 2. 場所マスター取得
   var locSheet = ss.getSheetByName(SHEETS.LOCATION);
   var locData = locSheet.getDataRange().getValues();
   var locations = [];
@@ -63,7 +168,6 @@ function getInitialDataForApp_(userEmail) {
     });
   }
 
-  // 3. ユーザー設定取得
   var userSettingSheet = ss.getSheetByName(SHEETS.USER_SETTING);
   var userData = userSettingSheet.getDataRange().getValues();
   var userSetting = null;
@@ -79,7 +183,6 @@ function getInitialDataForApp_(userEmail) {
     }
   }
 
-  // 4. 設定情報取得 (Feedback URLなど)
   var configSheet = ss.getSheetByName(SHEETS.CONFIG);
   var configData = configSheet.getDataRange().getValues();
   var feedbackUrl = "";
@@ -90,23 +193,16 @@ function getInitialDataForApp_(userEmail) {
     }
   }
 
-  // 5. 登録済みデータ取得
-  // 高速化案1: 過去3ヶ月分（約90日）より古いデータは初期読込対象外とする
   var wasteSheet = ss.getSheetByName(SHEETS.DATA);
   var wasteData = wasteSheet.getDataRange().getValues();
   var registeredData = {};
-  
   var thresholdDate = new Date();
   thresholdDate.setMonth(thresholdDate.getMonth() - 3); 
   
-  // 新しい順に走査することで最新値を優先取得
   for (var n = wasteData.length - 1; n >= 1; n--) { 
     var row = wasteData[n];
     var rawDate = new Date(row[4]);
-    
-    // 3ヶ月以前のデータはスキップ（初期読込の通信量削減）
     if (rawDate < thresholdDate) continue;
-
     var catId = String(row[1]);
     var catName = String(row[2]);
     var val = parseFloat(row[3]);
@@ -114,13 +210,10 @@ function getInitialDataForApp_(userEmail) {
     var roomId = String(row[6]);
     var user = String(row[12]);
     var time = String(row[13]); 
-
     if (!registeredData[dateStr]) registeredData[dateStr] = {};
     if (!registeredData[dateStr][roomId]) {
       registeredData[dateStr][roomId] = { total: 0, cats: {}, logs: [] };
     }
-    
-    // カテゴリごとの値を保持（逆順走査なので最初の1件が最新）
     if (registeredData[dateStr][roomId].cats[catId] === undefined) {
       registeredData[dateStr][roomId].cats[catId] = val;
     }
@@ -133,7 +226,6 @@ function getInitialDataForApp_(userEmail) {
     });
   }
 
-  // 各日付・場所ごとの合計を算出
   for (var d in registeredData) {
     for (var r in registeredData[d]) {
       var total = 0;
@@ -151,19 +243,19 @@ function getInitialDataForApp_(userEmail) {
     userExists: userExists,
     registeredData: registeredData,
     feedbackUrl: feedbackUrl,
+    userName: userName,
     serverTime: Date.now()
   };
 }
 
 /**
- * ユーザーの初期設定（拠点・場所）を保存
+ * ユーザーの初期設定を保存
  */
 function registerUserSetting(base, roomId) {
   var userEmail = Session.getActiveUser().getEmail() || "anonymous@mipox.co.jp";
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.USER_SETTING);
   var data = sheet.getDataRange().getValues();
-  
   var foundRow = -1;
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] === userEmail) {
@@ -171,21 +263,22 @@ function registerUserSetting(base, roomId) {
       break;
     }
   }
-  
   if (foundRow > 0) {
     sheet.getRange(foundRow, 2, 1, 2).setValues([[base, roomId]]);
   } else {
     sheet.appendRow([userEmail, base, roomId]);
   }
-  
   return { success: true };
 }
 
 /**
- * 報告データを保存（WastesDataシート）
+ * 報告データを保存
  */
 function executeSaveReport(formData) {
   var userEmail = Session.getActiveUser().getEmail() || "anonymous@mipox.co.jp";
+  var userName = getOrRegisterUserName_(userEmail);
+  var userDisplayName = userName || (userEmail ? userEmail.split('@')[0] : "不明ユーザー");
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.DATA);
   var locSheet = ss.getSheetByName(SHEETS.LOCATION);
@@ -204,7 +297,6 @@ function executeSaveReport(formData) {
   var now = new Date();
   var formattedNow = Utilities.formatDate(now, "JST", "yyyy/MM/dd HH:mm:ss");
   var dateNumStr = formData.date.replace(/-/g, "");
-
   var lastRow = sheet.getLastRow();
   var dataValues = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 15).getValues() : [];
   var startRow = 2;
@@ -213,7 +305,6 @@ function executeSaveReport(formData) {
     var item = formData.items[i];
     var inputVal = parseFloat(item.value);
     if (isNaN(inputVal) || inputVal <= 0) continue;
-    
     var matchedIdx = -1;
     for (var k = dataValues.length - 1; k >= 0; k--) {
       if (String(dataValues[k][11]).replace(/,/g, '') === dateNumStr && 
@@ -223,10 +314,9 @@ function executeSaveReport(formData) {
         break;
       }
     }
-
     if (matchedIdx > 0) {
       sheet.getRange(matchedIdx, 4).setValue(inputVal); 
-      sheet.getRange(matchedIdx, 13).setValue(userEmail); 
+      sheet.getRange(matchedIdx, 13).setValue(userDisplayName); 
       sheet.getRange(matchedIdx, 14).setValue(formattedNow); 
     } else {
       var yearStr = new Date(formData.date).getFullYear() + "年";
@@ -244,16 +334,11 @@ function executeSaveReport(formData) {
         yearStr, 
         monthStr,
         dateNumStr,
-        userEmail,
+        userDisplayName, 
         formattedNow,
         formData.baseName + "_" + roomName + "_" + item.categoryId + "_" + dateNumStr 
       ]);
     }
   }
-
-  return { 
-    success: true, 
-    user: userEmail, 
-    time: formattedNow 
-  };
+  return { success: true, user: userDisplayName, time: formattedNow };
 }
