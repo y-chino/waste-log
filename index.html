@@ -41,7 +41,7 @@
             z-index: 7900; 
             visibility: hidden; 
             opacity: 0; 
-            transition: opacity color 0.3s, visibility 0.3s;
+            transition: opacity 0.3s, visibility 0.3s;
             pointer-events: auto;
         }
         #slider-backdrop.visible { visibility: visible; opacity: 1; }
@@ -338,7 +338,7 @@
                             <span id="label-manual" class="text-sm font-bold text-emerald-600 mb-1 uppercase tracking-tight">今回分</span>
                             <input type="number" id="manual-input-field" step="0.1" inputmode="decimal" class="val-input !text-slate-900 !border-slate-900" placeholder="0.0" onfocus="handleInputFocus(this)" oninput="onManualInput(this.value)">
                         </div>
-                        <span id="val-unit" class="text-lg font-bold text-slate-500 mb-3">Kg</span>
+                        <span class="text-lg font-bold text-slate-500 mb-3">Kg</span>
                     </div>
                 </div>
                 <div class="grid grid-cols-4 gap-2">
@@ -693,7 +693,6 @@
                 hideToast(); 
             } else { 
                 state.selectedRegBase = null; state.isRegLocked = false; updateRegUI(); 
-                // 指示：報告場所を設定してください に変更
                 showToast("報告場所を設定してください<br>※次回以降も保存されます", "info");
             }
         }
@@ -941,7 +940,33 @@
             }, 300);
         }
 
-        function setToday(c = true) { var n = new Date(state.serverTime); calendarViewDate = new Date(n); selectDateFromCal(n.toISOString().split('T')[0], false); }
+        function setToday(c = true) { 
+            var n = new Date(state.serverTime);
+            var todayMonth = new Date(n.getFullYear(), n.getMonth(), 1);
+            var viewMonth = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth(), 1);
+
+            if (todayMonth.getTime() !== viewMonth.getTime()) {
+                var dir = todayMonth > viewMonth ? 1 : -1;
+                var w = document.getElementById('calendar-slide-wrapper');
+                w.style.transition = 'transform 0.3s ease-out';
+                w.style.transform = dir > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+
+                setTimeout(() => {
+                    calendarViewDate = new Date(n);
+                    w.style.transition = 'none';
+                    w.style.transform = dir > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+                    renderCalendar();
+                    setTimeout(() => {
+                        w.style.transition = 'transform 0.3s ease-out';
+                        w.style.transform = 'translateX(0)';
+                    }, 20);
+                    selectDateFromCal(n.toISOString().split('T')[0], false);
+                }, 300);
+            } else {
+                calendarViewDate = new Date(n);
+                selectDateFromCal(n.toISOString().split('T')[0], false);
+            }
+        }
 
         function updateTodayButtonState() {
             var btn = document.getElementById('btn-select-today');
@@ -1027,7 +1052,7 @@
             var reg = state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {};
             cont.innerHTML = state.categories.filter(c => isCategoryAllowed(c, myB)).map(c => {
                 var orig = reg[c.id] || 0, vCorr = correctionValues[c.id] !== undefined ? correctionValues[c.id] : orig, vIn = inputValues[c.id] || 0, cur = vCorr + vIn, diff = cur - orig, isP = Math.abs(diff) >= 0.01;
-                return `<div class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all overflow-hidden ${isP ? "border-2 border-orange-500 bg-orange-50/20" : (cur > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border-2 border-slate-200 bg-white")}" onclick="openSlider('${c.id}', '${c.name}')">${c.detail ? `<div id="tooltip-${c.id}" class="absolute inset-3 bg-slate-900/90 text-white rounded-lg flex items-center justify-center p-2 opacity-0 invisible transition-all duration-200 z-10 pointer-events-none text-center"><p class="text-[12px] leading-snug font-medium">${c.detail}</p></div>` : ''}<div><div class="flex items-center justify-between gap-1"><div class="text-base font-bold truncate text-[#1e293b] flex-1 pr-1">${c.name}</div>${c.detail ? `<div class="cursor-help flex items-center" onclick="showTooltip('${c.id}', event)"><i class="fa-solid fa-circle-info text-slate-300 text-[15px]"></i></div>` : ''}</div><div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div></div><div class="flex flex-col items-end pb-1.5 relative"><div class="absolute bottom-full right-6 mb-0.5 whitespace-nowrap">${isP ? `<span class="text-sm font-black ${diff > 0 ? "text-orange-500" : "text-blue-500"} leading-none">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</span>` : ''}</div><div class="flex items-baseline gap-1"><div class="text-3xl font-black text-[#1e293b] leading-none">${cur.toLocaleString(undefined,{minimumFractionDigits:1})}</div><div class="text-xs font-bold text-slate-500">Kg</div></div></div></div>`;
+                return `<div class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all overflow-hidden ${isP ? "border-2 border-orange-500 bg-orange-50/20" : (cur > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border-2 border-slate-200 bg-white")}" onclick="openSlider('${c.id}', '${c.name}')">${c.detail ? `<div id="tooltip-${c.id}" class="absolute inset-3 bg-slate-900/90 text-white rounded-lg flex items-center justify-center p-2 opacity-0 invisible transition-all duration-200 z-10 pointer-events-none text-center"><p class="text-[12px] leading-snug font-medium">${c.detail}</p></div>` : ''}<div><div class="flex items-center justify-between gap-1"><div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1 pr-1">${c.name}</div>${c.detail ? `<div class="cursor-help flex items-center" onclick="showTooltip('${c.id}', event)"><i class="fa-solid fa-circle-info text-slate-300 text-[15px]"></i></div>` : ''}</div><div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div></div><div class="flex flex-col items-end pb-1.5 relative"><div class="absolute bottom-full right-6 mb-0.5 whitespace-nowrap">${isP ? `<span class="text-sm font-black ${diff > 0 ? "text-orange-500" : "text-blue-500"} leading-none">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</span>` : ''}</div><div class="flex items-baseline gap-1"><div class="text-3xl font-black text-[#1e293b] leading-none">${cur.toLocaleString(undefined,{minimumFractionDigits:1})}</div><div class="text-xs font-bold text-slate-500">Kg</div></div></div></div>`;
             }).join('');
         }
 
