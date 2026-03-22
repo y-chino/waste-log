@@ -112,7 +112,7 @@ function getOrRegisterUserName_(email) {
 }
 
 /**
- * 初期データ取得（ConfigシートはA2セルを直接参照）
+ * 初期データ取得
  */
 function getInitialDataForApp_(userEmail) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -146,11 +146,18 @@ function getInitialDataForApp_(userEmail) {
     }
   }
 
-  // Configシート：A1がヘッダー、A2がURLとして取得
+  // Configシート：A列にキー(FEEDBACK, SUMMARY)、B列にURL
   var configSheet = ss.getSheetByName(SHEETS.CONFIG);
   var feedbackUrl = "";
+  var summaryUrl = "";
   if (configSheet) {
-    feedbackUrl = String(configSheet.getRange(2, 1).getValue()).trim();
+    var configValues = configSheet.getRange(2, 1, configSheet.getLastRow()-1, 2).getValues();
+    configValues.forEach(function(row) {
+      var key = String(row[0]).trim().toUpperCase();
+      var url = String(row[1]).trim();
+      if (key === "FEEDBACK") feedbackUrl = url;
+      if (key === "SUMMARY") summaryUrl = url;
+    });
   }
 
   var wasteSheet = ss.getSheetByName(SHEETS.DATA);
@@ -166,6 +173,7 @@ function getInitialDataForApp_(userEmail) {
     userExists: userExists,
     registeredData: registeredData,
     feedbackUrl: feedbackUrl,
+    summaryUrl: summaryUrl,
     userName: userName,
     serverTime: Date.now()
   };

@@ -408,7 +408,7 @@
                         <div class="flex items-start gap-4 p-2">
                             <div class="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center font-black text-orange-600">1</div>
                             <div class="flex-1 pt-1">
-                                <p class="font-bold text-slate-800弘 leading-none mb-1 text-sm">日付を選択</p>
+                                <p class="font-bold text-slate-800 leading-none mb-1 text-sm">日付を選択</p>
                                 <p class="text-[11px] text-slate-500 text-justify">カレンダーの日付をタップすると閉じ、計量を開始できます。カレンダー部分は左右のフリックで月移動が可能です。</p>
                             </div>
                         </div>
@@ -427,7 +427,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="pt-0 flex flex-col gap-3">
+                    <div class="pt-0 flex flex-col gap-3 mt-4">
+                        <button id="btn-summary" class="w-full h-14 bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform" onclick="openSummaryPage()">
+                            <i class="fas fa-chart-line"></i>過去の計測データを見る
+                        </button>
                         <button id="btn-feedback" class="w-full h-14 bg-slate-800 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform" onclick="openFeedbackForm()">
                             <i class="fas fa-comment-dots"></i>フィードバックを送る
                         </button>
@@ -466,7 +469,7 @@
             } } }; 
         }
 
-        var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "", userName: "", currentToastType: null, loadedMonths: [] };
+        var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "", summaryUrl: "", userName: "", currentToastType: null, loadedMonths: [] };
         var inputValues = {}; var correctionValues = {};
         var calendarViewDate = new Date(); var activeSliderCatId = null;
         var iconTimer = null; 
@@ -546,7 +549,8 @@
                     { id: "15", name: "製品廃材", targetBase: "FP", detail: "研磨材端材等" },
                     { id: "21", name: "廃プラスチック", targetBase: "KP", detail: "成型屑等" }
                 ], 
-                feedbackUrl: "https://forms.gle/demo-url", // デモ用URL
+                feedbackUrl: "https://forms.gle/demo-url",
+                summaryUrl: "https://docs.google.com/spreadsheets/d/demo",
                 registeredData: {}, 
                 serverTime: Date.now() 
             }; 
@@ -580,11 +584,11 @@
         }
 
         function openFeedbackForm() {
-            if (state.feedbackUrl) {
-                window.open(state.feedbackUrl, '_blank');
-            } else {
-                showToast("フィードバックフォームのURLが設定されていません", "warning");
-            }
+            if (state.feedbackUrl) { window.open(state.feedbackUrl, '_blank'); } else { showToast("フィードバックフォームのURLが設定されていません", "warning"); }
+        }
+
+        function openSummaryPage() {
+            if (state.summaryUrl) { window.open(state.summaryUrl, '_blank'); } else { showToast("過去データ用URLが設定されていません", "warning"); }
         }
 
         function showToast(m, type = 'success') { 
