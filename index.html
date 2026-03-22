@@ -20,7 +20,21 @@
         
         .lock-scroll { overflow: hidden !important; height: 100vh !important; }
 
-        .loading-overlay { background: #ffffff; z-index: 9000; position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
+        /* ローディングオーバーレイをカレンダーバー（88+52+1=141px）の下に配置 */
+        .loading-overlay { 
+            background: #ffffff; 
+            z-index: 9000; 
+            position: fixed; 
+            top: 141px; 
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 1rem; 
+        }
         
         #slider-backdrop {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -113,8 +127,18 @@
         #calendar-expansion { max-height: 0; overflow: hidden; transition: max-height 0.6s ease-out, opacity 0.45s ease; opacity: 0; }
         #calendar-expansion.open { max-height: 1000px; opacity: 1; }
 
-        #history-expansion { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, opacity 0.3s ease; opacity: 0; }
-        #history-expansion.open { max-height: 1500px; opacity: 1; margin-top: 0.75rem; }
+        #history-expansion { 
+            max-height: 0; 
+            overflow: hidden; 
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, margin-top 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            opacity: 0; 
+            margin-top: 0;
+        }
+        #history-expansion.open { 
+            max-height: 2000px; 
+            opacity: 1; 
+            margin-top: 0.75rem; 
+        }
 
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -172,68 +196,8 @@
 </head>
 <body id="app-body" class="bg-slate-50 min-h-screen">
 
-    <div id="loader" class="loading-overlay">
-        <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
-        <span class="text-slate-500 font-bold text-sm tracking-widest animate-pulse">読み込み中...</span>
-    </div>
-
-    <div id="slider-backdrop"></div>
-
-    <div id="slider-panel" class="fixed bottom-0 left-0 right-0 p-6 pt-4 bg-white border-t border-slate-200 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[2.5rem]">
-        <div class="max-w-md mx-auto flex flex-col gap-5">
-            <div class="flex flex-col gap-3">
-                <div class="relative w-full px-1">
-                    <button id="btn-close-slider" class="absolute -top-1 -right-1 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-transform z-10">
-                        <i class="fas fa-times text-lg"></i>
-                    </button>
-                    <div class="flex flex-col gap-1.5 w-full">
-                        <div class="flex items-center gap-2 flex-wrap pr-10">
-                            <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
-                            <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
-                        </div>
-                        <div id="slider-cat-detail" class="hidden mt-4 w-full py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] font-medium leading-relaxed shadow-inner"></div>
-                        <div class="flex items-center gap-1.5 text-slate-500 mt-1">
-                            <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
-                            <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="flex flex-col items-center py-2">
-                <div class="flex items-end gap-3">
-                    <div id="edit-lock-container" class="flex flex-col items-center mb-3">
-                        <label class="switch">
-                            <input type="checkbox" id="edit-lock-toggle" onchange="toggleEditLock(this.checked)">
-                            <span class="slider-switch"></span>
-                        </label>
-                        <span id="edit-lock-label" class="text-[11px] font-black text-slate-500 mt-1">修正</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span id="label-registered" class="text-sm font-bold text-slate-400 mb-1 uppercase tracking-tight">登録済</span>
-                        <input type="number" id="registered-val-field" step="0.1" inputmode="decimal" class="val-input !border-slate-200" oninput="onRegisteredValChange(this.value)">
-                    </div>
-                    <span class="text-2xl font-black text-slate-300 mb-3">+</span>
-                    <div class="flex flex-col items-center">
-                        <span id="label-manual" class="text-sm font-bold text-emerald-600 mb-1 uppercase tracking-tight">今回分</span>
-                        <input type="number" id="manual-input-field" step="0.1" inputmode="decimal" class="val-input !text-slate-900 !border-slate-900" placeholder="0.0" onfocus="handleInputFocus(this)" oninput="onManualInput(this.value)">
-                    </div>
-                    <span class="text-lg font-bold text-slate-500 mb-3">Kg</span>
-                </div>
-            </div>
-            <div class="grid grid-cols-4 gap-2">
-                <button data-val="5" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+5</button>
-                <button data-val="10" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+10</button>
-                <button data-val="15" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+15</button>
-                <button data-val="20" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+20</button>
-            </div>
-            <div class="px-1 py-1.5">
-                <input type="range" id="input-slider" min="0" max="100" step="0.1" value="0" oninput="onSliderInput(this.value)">
-            </div>
-            <button id="btn-confirm-slider" class="btn-action font-bold" disabled onclick="closeSlider()">計量</button>
-        </div>
-    </div>
-
-    <div id="app-content" class="max-w-md mx-auto flex flex-col min-h-screen bg-white relative shadow-2xl border-x border-slate-100 hidden">
+    <div id="app-content" class="max-w-md mx-auto flex flex-col min-h-screen bg-white relative shadow-2xl border-x border-slate-100">
+        
         <header class="px-5 py-4 flex justify-between items-center h-[88px] z-[1000] bg-white border-b border-slate-50 gap-2">
             <div class="flex items-center gap-3 flex-shrink-0">
                 <div id="app-icon-trigger" class="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-sm cursor-pointer select-none active:scale-95 transition-transform flex-shrink-0">
@@ -248,14 +212,19 @@
             <div class="flex items-center gap-4 flex-shrink-0">
                 <div class="w-12 h-12 flex items-center justify-center">
                     <button id="btn-avatar" class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 active:ring-2 active:ring-blue-600 transition-all">
-                        <img id="global-user-avatar" src="" class="w-full h-full object-cover">
+                        <!-- 修正: 読込中のプレースホルダーを追加 -->
+                        <div id="avatar-placeholder" class="w-full h-full flex items-center justify-center text-slate-300">
+                            <i class="fas fa-user-circle text-3xl"></i>
+                        </div>
+                        <img id="global-user-avatar" src="" class="w-full h-full object-cover hidden">
                     </button>
                 </div>
             </div>
         </header>
 
         <div id="sticky-bar-container" class="px-4 pb-0 bg-white z-[950]">
-            <div id="sticky-calendar-bar" class="hidden">
+            <!-- 初期から表示させるため hidden を削除 -->
+            <div id="sticky-calendar-bar">
                 <div id="calendar-bar-container" class="relative w-full app-card h-[52px] flex items-center bg-slate-100 border-none shadow-none">
                     <div class="absolute left-4 z-30">
                         <button id="btn-select-today" class="today-striped px-2 py-1 rounded-lg text-sm font-black text-emerald-900 border border-emerald-100 shadow-sm active:scale-95 transition-transform">今日を選択</button>
@@ -326,7 +295,69 @@
                     <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.6</span>
                 </div>
             </div>
-            <div id="calendar-separator" class="hidden h-px bg-slate-200 w-full mt-1"></div>
+            <!-- セパレーターも表示 -->
+            <div id="calendar-separator" class="h-px bg-slate-200 w-full mt-1"></div>
+        </div>
+
+        <div id="loader" class="loading-overlay">
+            <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+            <span class="text-slate-500 font-bold text-sm tracking-widest animate-pulse">読み込み中...</span>
+        </div>
+
+        <div id="slider-backdrop"></div>
+
+        <div id="slider-panel" class="fixed bottom-0 left-0 right-0 p-6 pt-4 bg-white border-t border-slate-200 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[2.5rem]">
+            <div class="max-w-md mx-auto flex flex-col gap-5">
+                <div class="flex flex-col gap-3">
+                    <div class="relative w-full px-1">
+                        <button id="btn-close-slider" class="absolute -top-1 -right-1 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-transform z-10">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                        <div class="flex flex-col gap-1.5 w-full">
+                            <div class="flex items-center gap-2 flex-wrap pr-10">
+                                <h3 id="slider-cat-name" class="text-xl font-black text-[#1e293b] leading-tight truncate">カテゴリ</h3>
+                                <span id="slider-cat-id" class="text-[14px] text-slate-400 font-medium whitespace-nowrap">ID: ---</span>
+                            </div>
+                            <div id="slider-cat-detail" class="hidden mt-4 w-full py-2 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[13px] text-[#1e293b] font-medium leading-relaxed shadow-inner"></div>
+                            <div class="flex items-center gap-1.5 text-slate-500 mt-1">
+                                <i class="fas fa-door-open text-[12px] text-emerald-600"></i>
+                                <span id="slider-location-name" class="text-lg font-bold text-slate-700">場所名</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col items-center py-2">
+                    <div class="flex items-end gap-3">
+                        <div id="edit-lock-container" class="flex flex-col items-center mb-3">
+                            <label class="switch">
+                                <input type="checkbox" id="edit-lock-toggle" onchange="toggleEditLock(this.checked)">
+                                <span class="slider-switch"></span>
+                            </label>
+                            <span id="edit-lock-label" class="text-[11px] font-black text-slate-500 mt-1">修正</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span id="label-registered" class="text-sm font-bold text-slate-400 mb-1 uppercase tracking-tight">登録済</span>
+                            <input type="number" id="registered-val-field" step="0.1" inputmode="decimal" class="val-input !border-slate-200" oninput="onRegisteredValChange(this.value)">
+                        </div>
+                        <span class="text-2xl font-black text-slate-300 mb-3">+</span>
+                        <div class="flex flex-col items-center">
+                            <span id="label-manual" class="text-sm font-bold text-emerald-600 mb-1 uppercase tracking-tight">今回分</span>
+                            <input type="number" id="manual-input-field" step="0.1" inputmode="decimal" class="val-input !text-slate-900 !border-slate-900" placeholder="0.0" onfocus="handleInputFocus(this)" oninput="onManualInput(this.value)">
+                        </div>
+                        <span class="text-lg font-bold text-slate-500 mb-3">Kg</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <button data-val="5" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+5</button>
+                    <button data-val="10" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+10</button>
+                    <button data-val="15" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+15</button>
+                    <button data-val="20" class="btn-adjust h-12 rounded-xl bg-emerald-50 text-emerald-800 text-lg font-bold active:bg-emerald-600 active:text-white transition-colors">+20</button>
+                </div>
+                <div class="px-1 py-1.5">
+                    <input type="range" id="input-slider" min="0" max="100" step="0.1" value="0" oninput="onSliderInput(this.value)">
+                </div>
+                <button id="btn-confirm-slider" class="btn-action font-bold" disabled onclick="closeSlider()">計量</button>
+            </div>
         </div>
 
         <main class="flex-1 px-4 relative">
@@ -457,7 +488,7 @@
         <span id="toast-text"></span>
     </div>
 
-    <div id="server-bridge" style="display:none;" data-payload='<?!= initialPayload ?>' data-email="<?= userEmail ?>"></div>
+    <div id="server-bridge" style="display:none;" data-payload='null' data-email="<?= userEmail ?>"></div>
 
     <script>
         if (typeof google === 'undefined') { 
@@ -465,7 +496,10 @@
                 withSuccessHandler: function(cb) { this._s = cb; return this; }, 
                 registerUserSetting: function() { setTimeout(() => { if(this._s) this._s({success:true}); }, 500); }, 
                 executeSaveReport: function() { setTimeout(() => { if(this._s) this._s({success:true, user: 'デモユーザー', time: '2024/02/20 10:00:00'}); }, 500); },
-                getPastWasteData: function(y, m) { setTimeout(() => { if(this._s) this._s({}); }, 300); }
+                getPastWasteData: function(y, m) { setTimeout(() => { if(this._s) this._s({}); }, 300); },
+                getInitialDataForApp: function() { 
+                  setTimeout(() => { if(this._s) this._s(getDemoData()); }, 1000); 
+                }
             } } }; 
         }
 
@@ -486,30 +520,52 @@
                 var userEmail = bridge.getAttribute('data-email');
                 if (!userEmail || userEmail.indexOf('<' + '?') === 0) userEmail = "demo@mipox.co.jp";
                 
-                var decoded;
-                if (!rawPayload || rawPayload.indexOf('<' + '?') === 0 || rawPayload === "undefined" || rawPayload === "") { decoded = getDemoData(); } else { try { decoded = JSON.parse(rawPayload); } catch(e) { decoded = getDemoData(); } }
-                Object.assign(state, decoded); 
-                state.serverTime = decoded.serverTime || Date.now(); 
-                calendarViewDate = new Date(state.serverTime);
-                
-                var now = new Date(state.serverTime);
-                for(var i=0; i<3; i++) {
-                    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                    state.loadedMonths.push(d.getFullYear() + "-" + (d.getMonth() + 1));
-                }
+                // 修正: 読込中も日付が見えるようにクライアント時刻で仮表示
+                const now = new Date();
+                document.getElementById('display-date').innerText = (now.getMonth() + 1) + "月" + now.getDate() + "日";
 
-                setToday(false);
-                if (state.userExists && state.userSetting?.roomId) {
-                    state.isRegLocked = true; initRoomNavigation(); showMainView();
+                if (!rawPayload || rawPayload === "null" || rawPayload === "undefined" || rawPayload === "") {
+                  google.script.run.withSuccessHandler(function(decoded) {
+                    processInitialData(decoded, userEmail);
+                  }).getInitialDataForApp(userEmail);
                 } else {
-                    state.isRegLocked = false; showMainView(); showToast("こちらをクリックして初期設定を完了させてください", "setup");
+                  var decoded = JSON.parse(rawPayload);
+                  processInitialData(decoded, userEmail);
                 }
-                document.getElementById('display-user-email').innerText = userEmail;
-                document.getElementById('display-user-name').innerText = state.userName || (userEmail ? userEmail.split('@')[0] : "未登録ユーザー");
-                document.getElementById('global-user-avatar').src = "https://ui-avatars.com/api/?background=2563eb&color=fff&bold=true&name=" + encodeURIComponent(state.userName || userEmail);
-                setTimeout(() => { document.getElementById('loader').style.display = 'none'; document.getElementById('app-content').classList.remove('hidden'); }, 100);
+                
                 initEventListeners(); initSwipeSupport();
             } catch (e) { document.getElementById('loader').style.display = 'none'; }
+        }
+
+        function processInitialData(decoded, userEmail) {
+            Object.assign(state, decoded); 
+            state.serverTime = decoded.serverTime || Date.now(); 
+            calendarViewDate = new Date(state.serverTime);
+            
+            var now = new Date(state.serverTime);
+            for(var i=0; i<3; i++) {
+                var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                state.loadedMonths.push(d.getFullYear() + "-" + (d.getMonth() + 1));
+            }
+
+            setToday(false);
+            if (state.userExists && state.userSetting?.roomId) {
+                state.isRegLocked = true; initRoomNavigation(); showMainView();
+            } else {
+                state.isRegLocked = false; showMainView(); showToast("こちらをクリックして初期設定を完了させてください", "setup");
+            }
+            document.getElementById('display-user-email').innerText = userEmail;
+            document.getElementById('display-user-name').innerText = state.userName || (userEmail ? userEmail.split('@')[0] : "未登録ユーザー");
+            
+            // 修正: アバター画像の読込完了後に表示を切り替える
+            const avatarImg = document.getElementById('global-user-avatar');
+            avatarImg.src = "https://ui-avatars.com/api/?background=2563eb&color=fff&bold=true&name=" + encodeURIComponent(state.userName || userEmail);
+            avatarImg.onload = () => {
+                avatarImg.classList.remove('hidden');
+                document.getElementById('avatar-placeholder').classList.add('hidden');
+            };
+            
+            document.getElementById('loader').style.display = 'none';
         }
 
         function isCategoryAllowed(cat, base) { if (!cat.targetBase || cat.targetBase.trim() === "") return true; if (!base) return false; const targets = cat.targetBase.split(',').map(t => t.trim().toUpperCase()); return targets.includes(base.trim().toUpperCase()); }
