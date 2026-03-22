@@ -20,9 +20,9 @@ function doGet() {
   var template = HtmlService.createTemplateFromFile("index");
   var userEmail = Session.getActiveUser().getEmail() || "anonymous@mipox.co.jp";
   
-  var initialData = getInitialDataForApp_(userEmail);
-  
-  template.initialPayload = JSON.stringify(initialData);
+  // payloadは空で返し、クライアントサイドの initApp から非同期で getInitialDataForApp を呼ぶことで
+  // 画面の枠組みを先に表示させる（体感速度向上）
+  template.initialPayload = "null";
   template.userEmail = userEmail;
   
   return template.evaluate()
@@ -84,7 +84,7 @@ function syncOrganizationUsers() {
 }
 
 /**
- * 名簿から名前を取得。見つからない場合は組織から取得して自動登録
+ * 名簿から名前を取得
  */
 function getOrRegisterUserName_(email) {
   if (!email) return null;
@@ -97,45 +97,30 @@ function getOrRegisterUserName_(email) {
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]).toLowerCase() === lowEmail) { return data[i][1]; }
   }
-
-  if (typeof AdminDirectory !== 'undefined') {
-    try {
-      var user = AdminDirectory.Users.get(lowEmail);
-      if (user && user.name) {
-        var newName = user.name.fullName;
-        sheet.appendRow([lowEmail, newName]);
-        return newName;
-      }
-    } catch (e) { console.warn("Auto-reg failed: " + e.toString()); }
-  }
   return null;
 }
 
 /**
- * 初期データ取得
+ * 初期データ取得（効率化：所属データのみ・3ヶ月分）
  */
-function getInitialDataForApp_(userEmail) {
+function getInitialDataForApp(userEmail) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var userName = getOrRegisterUserName_(userEmail);
   if (!userName && userEmail) { userName = userEmail.split('@')[0]; }
 
-  // マスター類
-  var catSheet = ss.getSheetByName(SHEETS.CATEGORY);
-  var catData = catSheet.getDataRange().getValues();
-  var categories = [];
-  for (var i = 1; i < catData.length; i++) {
-    categories.push({ id: String(catData[i][0]).trim(), name: String(catData[i][1]).trim(), detail: String(catData[i][2] || "").trim(), targetBase: String(catData[i][3] || "").trim() });
-  }
+  // マスター取得
+  var catData = ss.getSheetByName(SHEETS.CATEGORY).getDataRange().getValues();
+  var categories = catData.slice(1).map(function(r) {
+    return { id: String(r[0]).trim(), name: String(r[1]).trim(), detail: String(r[2] || "").trim(), targetBase: String(r[3] || "").trim() };
+  });
 
-  var locSheet = ss.getSheetByName(SHEETS.LOCATION);
-  var locData = locSheet.getDataRange().getValues();
-  var locations = [];
-  for (var j = 1; j < locData.length; j++) {
-    locations.push({ id: String(locData[j][0]).trim(), name: String(locData[j][1]).trim(), dept: String(locData[j][2]).trim(), base: String(locData[j][3]).trim() });
-  }
+  var locData = ss.getSheetByName(SHEETS.LOCATION).getDataRange().getValues();
+  var locations = locData.slice(1).map(function(r) {
+    return { id: String(r[0]).trim(), name: String(r[1]).trim(), dept: String(r[2]).trim(), base: String(r[3]).trim() };
+  });
 
-  var userSettingSheet = ss.getSheetByName(SHEETS.USER_SETTING);
-  var userData = userSettingSheet.getDataRange().getValues();
+  // ユーザー設定取得
+  var userData = ss.getSheetByName(SHEETS.USER_SETTING).getDataRange().getValues();
   var userSetting = null;
   var userExists = false;
   for (var k = 1; k < userData.length; k++) {
@@ -146,25 +131,35 @@ function getInitialDataForApp_(userEmail) {
     }
   }
 
-  // Configシート：A列にキー(FEEDBACK, SUMMARY)、B列にURL
+  // Config取得
   var configSheet = ss.getSheetByName(SHEETS.CONFIG);
-  var feedbackUrl = "";
-  var summaryUrl = "";
+  var feedbackUrl = "", summaryUrl = "";
   if (configSheet) {
-    var configValues = configSheet.getRange(2, 1, configSheet.getLastRow()-1, 2).getValues();
+    var configValues = configSheet.getDataRange().getValues();
     configValues.forEach(function(row) {
       var key = String(row[0]).trim().toUpperCase();
-      var url = String(row[1]).trim();
-      if (key === "FEEDBACK") feedbackUrl = url;
-      if (key === "SUMMARY") summaryUrl = url;
+      if (key === "FEEDBACK") feedbackUrl = String(row[1]).trim();
+      if (key === "SUMMARY") summaryUrl = String(row[1]).trim();
     });
   }
 
-  var wasteSheet = ss.getSheetByName(SHEETS.DATA);
-  var wasteData = wasteSheet.getDataRange().getValues();
-  var now = new Date();
-  var thresholdDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); 
-  var registeredData = processWasteRows_(wasteData, thresholdDate);
+  var registeredData = {};
+  if (userExists) {
+    // 効率化：自分の所属（Dept）を特定
+    var myRoomId = userSetting.roomId;
+    var myLoc = locations.find(function(l) { return l.id === myRoomId; });
+    var myDept = myLoc ? myLoc.dept : null;
+    
+    // 所属建屋内の全ルームIDを取得
+    var targetRoomIds = locations.filter(function(l) { 
+      return l.dept === myDept && l.base === userSetting.base; 
+    }).map(function(l) { return l.id; });
+
+    var wasteData = ss.getSheetByName(SHEETS.DATA).getDataRange().getValues();
+    var now = new Date();
+    var thresholdDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // 3ヶ月分
+    registeredData = processWasteRows_(wasteData, thresholdDate, null, targetRoomIds);
+  }
 
   return {
     locations: locations,
@@ -179,30 +174,59 @@ function getInitialDataForApp_(userEmail) {
   };
 }
 
+/**
+ * 過去データ取得（効率化：所属データのみ）
+ */
 function getPastWasteData(year, month) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.DATA);
-  var wasteData = sheet.getDataRange().getValues();
+  var userEmail = Session.getActiveUser().getEmail() || "anonymous@mipox.co.jp";
+  
+  // ユーザーの所属ルーム特定
+  var userData = ss.getSheetByName(SHEETS.USER_SETTING).getDataRange().getValues();
+  var myRoomId = "";
+  for (var k = 1; k < userData.length; k++) {
+    if (userData[k][0] === userEmail) { myRoomId = String(userData[k][2]); break; }
+  }
+  
+  if (!myRoomId) return {};
+
+  var locData = ss.getSheetByName(SHEETS.LOCATION).getDataRange().getValues();
+  var myLoc = locData.find(function(r) { return String(r[0]) === myRoomId; });
+  var myDept = myLoc ? myLoc[2] : "";
+  var myBase = myLoc ? myLoc[3] : "";
+  
+  var targetRoomIds = locData.slice(1).filter(function(r) {
+    return String(r[2]) === myDept && String(r[3]) === myBase;
+  }).map(function(r) { return String(r[0]); });
+
+  var wasteData = ss.getSheetByName(SHEETS.DATA).getDataRange().getValues();
   var startDate = new Date(year, month - 1, 1);
   var endDate = new Date(year, month, 0, 23, 59, 59);
-  return processWasteRows_(wasteData, startDate, endDate);
+  
+  return processWasteRows_(wasteData, startDate, endDate, targetRoomIds);
 }
 
-function processWasteRows_(data, minDate, maxDate) {
+function processWasteRows_(data, minDate, maxDate, targetRoomIds) {
   var results = {};
   for (var n = data.length - 1; n >= 1; n--) { 
     var row = data[n];
     var rawDate = new Date(row[4]);
-    if (minDate && rawDate < minDate) continue;
+    
+    // 効率化：指定期間より古くなったらループを終了（データが時系列であることを想定）
+    if (minDate && rawDate < minDate) break; 
     if (maxDate && rawDate > maxDate) continue;
+    
+    var roomId = String(row[6]);
+    if (targetRoomIds && targetRoomIds.indexOf(roomId) === -1) continue; // 所属外はスキップ
+
     var catId = String(row[1]);
     var catName = String(row[2]);
     var val = parseFloat(row[3]);
     var dateStr = Utilities.formatDate(rawDate, "JST", "yyyy-MM-dd");
-    var roomId = String(row[6]);
     var user = String(row[12]);
     var rawTime = row[13];
     var time = (rawTime instanceof Date) ? Utilities.formatDate(rawTime, "JST", "yyyy/MM/dd HH:mm:ss") : String(rawTime);
+    
     if (!results[dateStr]) results[dateStr] = {};
     if (!results[dateStr][roomId]) { results[dateStr][roomId] = { total: 0, cats: {}, logs: [] }; }
     if (results[dateStr][roomId].cats[catId] === undefined) { results[dateStr][roomId].cats[catId] = val; }
@@ -248,7 +272,7 @@ function executeSaveReport(formData) {
   for (var i = 0; i < formData.items.length; i++) {
     var item = formData.items[i];
     var inputVal = parseFloat(item.value);
-    if (isNaN(inputVal) || inputVal <= 0) continue;
+    if (isNaN(inputVal)) continue;
     var matchedIdx = -1;
     for (var k = dataValues.length - 1; k >= 0; k--) {
       if (String(dataValues[k][11]).replace(/,/g, '') === dateNumStr && 
