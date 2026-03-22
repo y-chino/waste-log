@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-    <title>廃棄物報告 - v1.0.5</title>
+    <title>廃棄物報告 - v1.0.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -273,6 +273,12 @@
                     </div>
                 </div>
                 <div id="calendar-expansion" class="bg-white rounded-b-2xl px-1 pt-1 pb-0 open touch-pan-y slide-container">
+                    <div id="calendar-loading-overlay" class="absolute inset-0 bg-white/70 z-50 flex items-center justify-center hidden">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-8 h-8 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+                            <span class="text-[11px] font-bold text-emerald-800 tracking-tighter">読み込み中...</span>
+                        </div>
+                    </div>
                     <div id="calendar-slide-wrapper" class="slide-content">
                         <div class="grid grid-cols-7 mb-1 mt-0 items-center">
                             <div class="flex justify-center">
@@ -317,7 +323,7 @@
                         <i class="fas fa-info-circle text-slate-500 text-base mr-3"></i>
                         <h2 class="text-lg font-black text-[#1e293b]">アプリ説明</h2>
                     </div>
-                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.5</span>
+                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.6</span>
                 </div>
             </div>
             <div id="calendar-separator" class="hidden h-px bg-slate-200 w-full mt-1"></div>
@@ -483,7 +489,6 @@
                 state.serverTime = decoded.serverTime || Date.now(); 
                 calendarViewDate = new Date(state.serverTime);
                 
-                // 初回読み込み済みの月をマーク（現在月と過去2ヶ月）
                 var now = new Date(state.serverTime);
                 for(var i=0; i<3; i++) {
                     var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -515,7 +520,37 @@
             tooltipTimers[id] = setTimeout(() => { el.classList.add('invisible', 'opacity-0'); el.classList.remove('visible', 'opacity-100'); }, 3000);
         }
 
-        function getDemoData() { return { userExists: false, userName: "ゲストユーザー", locations: [{ id: "1", name: "CR1", dept: "B01", base: "HP" }], categories: [{ id: "1", name: "普通ごみ", targetBase: "HP", detail: "一般ごみ" }], feedbackUrl: "", registeredData: {}, serverTime: Date.now() }; }
+        function getDemoData() { 
+            return { 
+                userExists: false, 
+                userName: "デモユーザー", 
+                locations: [
+                    { id: "1", name: "CR1", dept: "B01", base: "HP" },
+                    { id: "7", name: "Mirai", dept: "B04", base: "HP" },
+                    { id: "8", name: "MigakuとHakaru", dept: "B04", base: "HP" },
+                    { id: "14", name: "調合", dept: "製造一課", base: "FP" },
+                    { id: "17", name: "電着C", dept: "製造三課", base: "FP" },
+                    { id: "22", name: "スリッター3機", dept: "製造四課", base: "FP" },
+                    { id: "32", name: "物流課", dept: "11B", base: "KP" },
+                    { id: "28", name: "事務所", dept: "11B", base: "KP" },
+                    { id: "kp-1-2", name: "プレス1号機", dept: "11B", base: "KP" }
+                ], 
+                categories: [
+                    { id: "1", name: "普通ごみ", targetBase: "HP,FP,KP", detail: "一般ごみ、可燃ごみ" },
+                    { id: "2", name: "木くず", targetBase: "HP,FP", detail: "木パレット、梱包材" },
+                    { id: "3", name: "再生フィルム", targetBase: "HP,FP", detail: "透明フィルム類" },
+                    { id: "5", name: "ダンボール", targetBase: "HP,FP,KP", detail: "梱包用ダンボール" },
+                    { id: "11", name: "有機溶剤廃液", targetBase: "HP", detail: "廃溶剤" },
+                    { id: "13", name: "廃液", targetBase: "FP", detail: "洗浄廃液" },
+                    { id: "14", name: "固形燃料", targetBase: "FP,KP", detail: "RPF原料" },
+                    { id: "15", name: "製品廃材", targetBase: "FP", detail: "研磨材端材等" },
+                    { id: "21", name: "廃プラスチック", targetBase: "KP", detail: "成型屑等" }
+                ], 
+                feedbackUrl: "https://forms.gle/demo-url", // デモ用URL
+                registeredData: {}, 
+                serverTime: Date.now() 
+            }; 
+        }
 
         function initRoomNavigation() {
             if (!state.userSetting?.roomId) return;
@@ -542,6 +577,14 @@
             document.getElementById('btn-reg-back').addEventListener('click', function() { if(!this.disabled) showMainView(false); });
             document.getElementById('btn-back-description').addEventListener('click', function() { if (!state.userExists || !state.isRegLocked) showRegistrationView(); else showMainView(false); });
             document.querySelectorAll('.btn-adjust').forEach(btn => { btn.addEventListener('click', function() { adjustValue(parseInt(this.dataset.val)); }); });
+        }
+
+        function openFeedbackForm() {
+            if (state.feedbackUrl) {
+                window.open(state.feedbackUrl, '_blank');
+            } else {
+                showToast("フィードバックフォームのURLが設定されていません", "warning");
+            }
         }
 
         function showToast(m, type = 'success') { 
@@ -763,12 +806,24 @@
             var sortedLogs = [...dayData.logs].sort((a, b) => b.time.localeCompare(a.time));
             var html = '<div class="space-y-0 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100">';
             sortedLogs.forEach((log) => {
-                var timeStr = log.time ? (log.time.split(' ').length >= 2 ? log.time.split(' ')[1].slice(0, 5) : log.time) : "---";
+                var timeStr = "---"; 
+                if (log.time) { 
+                    var dateObj = new Date(log.time.replace(/-/g, '/'));
+                    if (!isNaN(dateObj.getTime())) {
+                        var m = ("0" + (dateObj.getMonth() + 1)).slice(-2);
+                        var d = ("0" + dateObj.getDate()).slice(-2);
+                        var hr = ("0" + dateObj.getHours()).slice(-2);
+                        var min = ("0" + dateObj.getMinutes()).slice(-2);
+                        timeStr = m + "/" + d + " " + hr + ":" + min;
+                    } else {
+                        timeStr = log.time;
+                    }
+                }
                 var userDisp = log.user.includes('@') ? log.user.split('@')[0] : log.user;
                 html += `
                 <div class="relative pl-8 pb-5 last:pb-0 group">
-                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-emerald-500 flex items-center justify-center z-10 shadow-sm transition-transform group-active:scale-90">
-                        <i class="fas fa-check text-[10px] text-emerald-600"></i>
+                    <div class="absolute left-0 top-[-2px] w-6 h-6 rounded-full bg-white border-2 border-emerald-500 flex items-center justify-center z-10 shadow-sm transition-transform group-active:scale-90">
+                        <i class="fas fa-check text-[10px] text-emerald-600 translate-y-[0.5px]"></i>
                     </div>
                     <div class="flex flex-col">
                         <div class="flex justify-between items-center mb-0.5">
@@ -799,19 +854,18 @@
             setTimeout(() => {
                 calendarViewDate.setMonth(calendarViewDate.getMonth() + n);
                 w.style.transition = 'none'; w.style.transform = n > 0 ? 'translateX(100%)' : 'translateX(-100%)';
-                
-                // 遅延読み込みチェック
                 var targetKey = calendarViewDate.getFullYear() + "-" + (calendarViewDate.getMonth() + 1);
                 if (!state.loadedMonths.includes(targetKey)) {
-                    showToast("過去データを取得中...", "loading");
+                    var calLoading = document.getElementById('calendar-loading-overlay');
+                    if (calLoading) calLoading.classList.remove('hidden');
+
                     google.script.run.withSuccessHandler(function(pastData) {
                         Object.assign(state.registeredData, pastData);
                         state.loadedMonths.push(targetKey);
-                        hideToast();
+                        if (calLoading) calLoading.classList.add('hidden');
                         renderCalendar();
                     }).getPastWasteData(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + 1);
                 }
-
                 renderCalendar();
                 setTimeout(() => { w.style.transition = 'transform 0.3s ease-out'; w.style.transform = 'translateX(0)'; }, 20);
             }, 300);

@@ -127,7 +127,7 @@ function getOrRegisterUserName_(email) {
 }
 
 /**
- * アプリ起動時の初期データを取得（時間短縮のため直近3ヶ月に制限）
+ * アプリ起動時の初期データを取得（当月・先月・先々月に限定）
  */
 function getInitialDataForApp_(userEmail) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -171,12 +171,12 @@ function getInitialDataForApp_(userEmail) {
     if (configData[m][0] === "FEEDBACK_FORM_URL") { feedbackUrl = configData[m][1]; break; }
   }
 
-  // 登録済みデータ取得（初期ロードは3ヶ月分に制限）
+  // 登録済みデータ取得（当月・先月・先々月の3暦月分に制限）
   var wasteSheet = ss.getSheetByName(SHEETS.DATA);
   var wasteData = wasteSheet.getDataRange().getValues();
   
-  var thresholdDate = new Date();
-  thresholdDate.setMonth(thresholdDate.getMonth() - 3); 
+  var now = new Date();
+  var thresholdDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); 
   
   var registeredData = processWasteRows_(wasteData, thresholdDate);
 
@@ -200,7 +200,6 @@ function getPastWasteData(year, month) {
   var sheet = ss.getSheetByName(SHEETS.DATA);
   var wasteData = sheet.getDataRange().getValues();
   
-  // 指定された年月の範囲を特定
   var startDate = new Date(year, month - 1, 1);
   var endDate = new Date(year, month, 0, 23, 59, 59);
 
@@ -225,7 +224,14 @@ function processWasteRows_(data, minDate, maxDate) {
     var dateStr = Utilities.formatDate(rawDate, "JST", "yyyy-MM-dd");
     var roomId = String(row[6]);
     var user = String(row[12]);
-    var time = String(row[13]); 
+    
+    var rawTime = row[13];
+    var time = "";
+    if (rawTime instanceof Date) {
+      time = Utilities.formatDate(rawTime, "JST", "yyyy/MM/dd HH:mm:ss");
+    } else {
+      time = String(rawTime);
+    }
 
     if (!results[dateStr]) results[dateStr] = {};
     if (!results[dateStr][roomId]) {
