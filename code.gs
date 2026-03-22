@@ -1,5 +1,5 @@
 /**
- * 廃棄物報告アプリ - Backend Logic (v1.0.5 - Auto-Registration & Lazy Loading Version)
+ * 廃棄物報告アプリ - Backend Logic (v1.0.6 - Optimized)
  */
 
 var APP_TITLE = "廃棄物報告";
@@ -32,14 +32,14 @@ function doGet() {
 }
 
 /**
- * 組織の全ユーザーを同期する（初期構築や一括更新用）
+ * 組織の全ユーザーを同期する
  */
 function syncOrganizationUsers() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.USER_MASTER);
   
   if (typeof AdminDirectory === 'undefined') {
-    var errorMsg = "エラー: Admin SDK API が有効化されていません。GASエディタの左メニュー「サービス」から「Admin SDK API」を追加してください。";
+    var errorMsg = "エラー: Admin SDK API が有効化されていません。";
     Logger.log(errorMsg);
     return errorMsg;
   }
@@ -53,9 +53,7 @@ function syncOrganizationUsers() {
 
   var users = [];
   var pageToken;
-  
   try {
-    Logger.log("組織ユーザーの取得を開始します...");
     do {
       var response = AdminDirectory.Users.list({
         customer: 'my_customer',
@@ -64,7 +62,6 @@ function syncOrganizationUsers() {
         orderBy: 'email',
         viewType: 'domain_public' 
       });
-      
       if (response.users && response.users.length > 0) {
         response.users.forEach(function(user) {
           users.push([user.primaryEmail.toLowerCase(), user.name.fullName]);
@@ -75,40 +72,30 @@ function syncOrganizationUsers() {
 
     if (users.length > 0) {
       var lastRow = sheet.getLastRow();
-      if (lastRow > 1) {
-        sheet.getRange(2, 1, lastRow - 1, 2).clearContent();
-      }
+      if (lastRow > 1) { sheet.getRange(2, 1, lastRow - 1, 2).clearContent(); }
       sheet.getRange(2, 1, users.length, 2).setValues(users);
       SpreadsheetApp.flush(); 
       return "同期完了: " + users.length + " 名を登録しました。";
-    } else {
-      return "警告: 組織内にユーザーが見つかりませんでした。";
     }
+    return "ユーザーが見つかりませんでした。";
   } catch (e) {
     return "エラー: " + e.toString();
   }
 }
 
 /**
- * 名簿から名前を取得。見つからない場合は組織から取得してシートに自動追加する
+ * 名簿から名前を取得。見つからない場合は組織から取得して自動登録
  */
 function getOrRegisterUserName_(email) {
   if (!email) return null;
   var lowEmail = email.toLowerCase();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.USER_MASTER);
-  
-  if (!sheet) {
-    var syncResult = syncOrganizationUsers();
-    if (syncResult.indexOf("エラー") === 0) return null;
-    sheet = ss.getSheetByName(SHEETS.USER_MASTER);
-  }
+  if (!sheet) { syncOrganizationUsers(); sheet = ss.getSheetByName(SHEETS.USER_MASTER); }
   
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]).toLowerCase() === lowEmail) {
-      return data[i][1];
-    }
+    if (String(data[i][0]).toLowerCase() === lowEmail) { return data[i][1]; }
   }
 
   if (typeof AdminDirectory !== 'undefined') {
@@ -119,37 +106,32 @@ function getOrRegisterUserName_(email) {
         sheet.appendRow([lowEmail, newName]);
         return newName;
       }
-    } catch (e) {
-      console.warn("New user auto-registration failed: " + e.toString());
-    }
+    } catch (e) { console.warn("Auto-reg failed: " + e.toString()); }
   }
   return null;
 }
 
 /**
- * アプリ起動時の初期データを取得（当月・先月・先々月に限定）
+ * 初期データ取得（ConfigシートはA2セルを直接参照）
  */
 function getInitialDataForApp_(userEmail) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  
   var userName = getOrRegisterUserName_(userEmail);
-  if (!userName && userEmail) {
-    userName = userEmail.split('@')[0];
-  }
+  if (!userName && userEmail) { userName = userEmail.split('@')[0]; }
 
-  // マスター類取得
+  // マスター類
   var catSheet = ss.getSheetByName(SHEETS.CATEGORY);
   var catData = catSheet.getDataRange().getValues();
   var categories = [];
   for (var i = 1; i < catData.length; i++) {
-    categories.push({ id: String(catData[i][0]), name: String(catData[i][1]), detail: String(catData[i][2] || ""), targetBase: String(catData[i][3] || "") });
+    categories.push({ id: String(catData[i][0]).trim(), name: String(catData[i][1]).trim(), detail: String(catData[i][2] || "").trim(), targetBase: String(catData[i][3] || "").trim() });
   }
 
   var locSheet = ss.getSheetByName(SHEETS.LOCATION);
   var locData = locSheet.getDataRange().getValues();
   var locations = [];
   for (var j = 1; j < locData.length; j++) {
-    locations.push({ id: String(locData[j][0]), name: String(locData[j][1]), dept: String(locData[j][2]), base: String(locData[j][3]) });
+    locations.push({ id: String(locData[j][0]).trim(), name: String(locData[j][1]).trim(), dept: String(locData[j][2]).trim(), base: String(locData[j][3]).trim() });
   }
 
   var userSettingSheet = ss.getSheetByName(SHEETS.USER_SETTING);
@@ -164,20 +146,17 @@ function getInitialDataForApp_(userEmail) {
     }
   }
 
+  // Configシート：A1がヘッダー、A2がURLとして取得
   var configSheet = ss.getSheetByName(SHEETS.CONFIG);
-  var configData = configSheet.getDataRange().getValues();
   var feedbackUrl = "";
-  for (var m = 1; m < configData.length; m++) {
-    if (configData[m][0] === "FEEDBACK_FORM_URL") { feedbackUrl = configData[m][1]; break; }
+  if (configSheet) {
+    feedbackUrl = String(configSheet.getRange(2, 1).getValue()).trim();
   }
 
-  // 登録済みデータ取得（当月・先月・先々月の3暦月分に制限）
   var wasteSheet = ss.getSheetByName(SHEETS.DATA);
   var wasteData = wasteSheet.getDataRange().getValues();
-  
   var now = new Date();
   var thresholdDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); 
-  
   var registeredData = processWasteRows_(wasteData, thresholdDate);
 
   return {
@@ -192,57 +171,35 @@ function getInitialDataForApp_(userEmail) {
   };
 }
 
-/**
- * 特定の年月の過去データを取得する（遅延読み込み用）
- */
 function getPastWasteData(year, month) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.DATA);
   var wasteData = sheet.getDataRange().getValues();
-  
   var startDate = new Date(year, month - 1, 1);
   var endDate = new Date(year, month, 0, 23, 59, 59);
-
   return processWasteRows_(wasteData, startDate, endDate);
 }
 
-/**
- * シートの行データを構造化オブジェクトに変換する共通処理
- */
 function processWasteRows_(data, minDate, maxDate) {
   var results = {};
   for (var n = data.length - 1; n >= 1; n--) { 
     var row = data[n];
     var rawDate = new Date(row[4]);
-    
     if (minDate && rawDate < minDate) continue;
     if (maxDate && rawDate > maxDate) continue;
-
     var catId = String(row[1]);
     var catName = String(row[2]);
     var val = parseFloat(row[3]);
     var dateStr = Utilities.formatDate(rawDate, "JST", "yyyy-MM-dd");
     var roomId = String(row[6]);
     var user = String(row[12]);
-    
     var rawTime = row[13];
-    var time = "";
-    if (rawTime instanceof Date) {
-      time = Utilities.formatDate(rawTime, "JST", "yyyy/MM/dd HH:mm:ss");
-    } else {
-      time = String(rawTime);
-    }
-
+    var time = (rawTime instanceof Date) ? Utilities.formatDate(rawTime, "JST", "yyyy/MM/dd HH:mm:ss") : String(rawTime);
     if (!results[dateStr]) results[dateStr] = {};
-    if (!results[dateStr][roomId]) {
-      results[dateStr][roomId] = { total: 0, cats: {}, logs: [] };
-    }
-    if (results[dateStr][roomId].cats[catId] === undefined) {
-      results[dateStr][roomId].cats[catId] = val;
-    }
+    if (!results[dateStr][roomId]) { results[dateStr][roomId] = { total: 0, cats: {}, logs: [] }; }
+    if (results[dateStr][roomId].cats[catId] === undefined) { results[dateStr][roomId].cats[catId] = val; }
     results[dateStr][roomId].logs.push({ catId: catId, catName: catName, val: val, user: user, time: time });
   }
-
   for (var d in results) {
     for (var r in results[d]) {
       var total = 0;
@@ -253,56 +210,33 @@ function processWasteRows_(data, minDate, maxDate) {
   return results;
 }
 
-/**
- * ユーザーの初期設定を保存
- */
 function registerUserSetting(base, roomId) {
   var userEmail = Session.getActiveUser().getEmail() || "anonymous@mipox.co.jp";
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.USER_SETTING);
   var data = sheet.getDataRange().getValues();
   var foundRow = -1;
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === userEmail) { foundRow = i + 1; break; }
-  }
-  if (foundRow > 0) {
-    sheet.getRange(foundRow, 2, 1, 2).setValues([[base, roomId]]);
-  } else {
-    sheet.appendRow([userEmail, base, roomId]);
-  }
+  for (var i = 1; i < data.length; i++) { if (data[i][0] === userEmail) { foundRow = i + 1; break; } }
+  if (foundRow > 0) { sheet.getRange(foundRow, 2, 1, 2).setValues([[base, roomId]]); } else { sheet.appendRow([userEmail, base, roomId]); }
   return { success: true };
 }
 
-/**
- * 報告データを保存
- */
 function executeSaveReport(formData) {
   var userEmail = Session.getActiveUser().getEmail() || "anonymous@mipox.co.jp";
   var userName = getOrRegisterUserName_(userEmail);
   var userDisplayName = userName || (userEmail ? userEmail.split('@')[0] : "不明ユーザー");
-
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.DATA);
   var locSheet = ss.getSheetByName(SHEETS.LOCATION);
-  
   var locData = locSheet.getDataRange().getValues();
-  var roomName = "";
-  var deptName = "";
-  for (var j = 1; j < locData.length; j++) {
-    if (String(locData[j][0]) === String(formData.roomId)) {
-      roomName = locData[j][1];
-      deptName = locData[j][2];
-      break;
-    }
-  }
-
+  var roomName = "", deptName = "";
+  for (var j = 1; j < locData.length; j++) { if (String(locData[j][0]) === String(formData.roomId)) { roomName = locData[j][1]; deptName = locData[j][2]; break; } }
   var now = new Date();
   var formattedNow = Utilities.formatDate(now, "JST", "yyyy/MM/dd HH:mm:ss");
   var dateNumStr = formData.date.replace(/-/g, "");
   var lastRow = sheet.getLastRow();
   var dataValues = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 15).getValues() : [];
   var startRow = 2;
-
   for (var i = 0; i < formData.items.length; i++) {
     var item = formData.items[i];
     var inputVal = parseFloat(item.value);
@@ -312,8 +246,7 @@ function executeSaveReport(formData) {
       if (String(dataValues[k][11]).replace(/,/g, '') === dateNumStr && 
           String(dataValues[k][1]).trim() === String(item.categoryId).trim() && 
           String(dataValues[k][6]).trim() === String(formData.roomId).trim()) {
-        matchedIdx = startRow + k; 
-        break;
+        matchedIdx = startRow + k; break;
       }
     }
     if (matchedIdx > 0) {
@@ -323,23 +256,7 @@ function executeSaveReport(formData) {
     } else {
       var yearStr = new Date(formData.date).getFullYear() + "年";
       var monthStr = yearStr + ("0" + (new Date(formData.date).getMonth() + 1)).slice(-2) + "月";
-      sheet.appendRow([
-        lastRow + 1 + i, 
-        item.categoryId, 
-        item.categoryName, 
-        inputVal, 
-        formData.date, 
-        formData.baseName, 
-        formData.roomId, 
-        roomName, 
-        deptName, 
-        yearStr, 
-        monthStr,
-        dateNumStr,
-        userDisplayName, 
-        formattedNow,
-        formData.baseName + "_" + roomName + "_" + item.categoryId + "_" + dateNumStr 
-      ]);
+      sheet.appendRow([lastRow + 1 + i, item.categoryId, item.categoryName, inputVal, formData.date, formData.baseName, formData.roomId, roomName, deptName, yearStr, monthStr, dateNumStr, userDisplayName, formattedNow, formData.baseName + "_" + roomName + "_" + item.categoryId + "_" + dateNumStr]);
     }
   }
   return { success: true, user: userDisplayName, time: formattedNow };
