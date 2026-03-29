@@ -497,6 +497,13 @@
             } } }; 
         }
 
+        /**
+         * 日本時間(JST)のYYYY-MM-DD形式の文字列を取得するヘルパー
+         */
+        function formatJST(date) {
+            return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(date);
+        }
+
         var state = { locations: [], categories: [], userSetting: null, registeredData: {}, serverTime: Date.now(), pendingChanges: {}, selectedRegBase: null, selectedDate: "", isRegLocked: false, activeRoomIndex: 0, roomsInDept: [], userExists: false, feedbackUrl: "", summaryUrl: "", userName: "", currentToastType: null, loadedMonths: [] };
         var inputValues = {}; var correctionValues = {};
         var calendarViewDate = new Date(); var activeSliderCatId = null;
@@ -514,8 +521,9 @@
                 var userEmail = bridge.getAttribute('data-email');
                 if (!userEmail || userEmail.indexOf('<' + '?') === 0) userEmail = "demo@mipox.co.jp";
                 
-                const now = new Date();
-                document.getElementById('display-date').innerText = (now.getMonth() + 1) + "月" + now.getDate() + "日";
+                // データの読み込み完了を待たずに、まず現在の日付（日本時間）を表示します
+                state.selectedDate = formatJST(new Date());
+                updateDateDisplay();
 
                 if (!rawPayload || rawPayload === "null" || rawPayload === "undefined" || rawPayload === "") {
                   google.script.run.withSuccessHandler(function(decoded) {
@@ -561,6 +569,9 @@
             document.getElementById('btn-select-today').classList.remove('hidden');
             document.getElementById('calendar-toggle-group').classList.remove('hidden');
             
+            // 表示上の日付ラベルを最新の状態に更新
+            updateDateDisplay();
+
             document.getElementById('loader').style.display = 'none';
         }
 
@@ -960,18 +971,18 @@
                         w.style.transition = 'transform 0.3s ease-out';
                         w.style.transform = 'translateX(0)';
                     }, 20);
-                    selectDateFromCal(n.toISOString().split('T')[0], false);
+                    selectDateFromCal(formatJST(n), false);
                 }, 300);
             } else {
                 calendarViewDate = new Date(n);
-                selectDateFromCal(n.toISOString().split('T')[0], false);
+                selectDateFromCal(formatJST(n), false);
             }
         }
 
         function updateTodayButtonState() {
             var btn = document.getElementById('btn-select-today');
             var today = new Date(state.serverTime);
-            var todayStr = today.toISOString().split('T')[0];
+            var todayStr = formatJST(today);
             
             var viewY = calendarViewDate.getFullYear();
             var viewM = calendarViewDate.getMonth();
@@ -1012,7 +1023,7 @@
             var grid = document.getElementById('calendar-grid'), y = calendarViewDate.getFullYear(), m = calendarViewDate.getMonth(); 
             document.getElementById('calendar-title').innerText = y + "年 " + (m + 1) + "月"; grid.innerHTML = "";
             var fD = new Date(y, m, 1), lD = new Date(y, m + 1, 0), fDI = fD.getDay(), pMLD = new Date(y, m, 0).getDate();
-            var tStr = new Date(state.serverTime).toISOString().split('T')[0], curRoomId = String(state.userSetting?.roomId || "").trim(), myB = state.userSetting?.base;
+            var tStr = formatJST(new Date(state.serverTime)), curRoomId = String(state.userSetting?.roomId || "").trim(), myB = state.userSetting?.base;
             
             const today = new Date(state.serverTime);
             const isFutureLimit = (y >= today.getFullYear() && m >= today.getMonth());
@@ -1051,8 +1062,8 @@
             var dots = document.getElementById('room-dots-container'); if (dots) dots.innerHTML = state.roomsInDept.map((r, i) => `<div class="h-1.5 rounded-full transition-all duration-300 ${i === state.activeRoomIndex ? 'w-4 bg-emerald-600' : 'w-1.5 bg-slate-200'}"></div>`).join('');
             var reg = state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {};
             cont.innerHTML = state.categories.filter(c => isCategoryAllowed(c, myB)).map(c => {
-                var orig = reg[c.id] || 0, vCorr = correctionValues[c.id] !== undefined ? correctionValues[c.id] : orig, vIn = inputValues[c.id] || 0, cur = vCorr + vIn, diff = cur - orig, isP = Math.abs(diff) >= 0.01;
-                return `<div class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all overflow-hidden ${isP ? "border-2 border-orange-500 bg-orange-50/20" : (cur > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border-2 border-slate-200 bg-white")}" onclick="openSlider('${c.id}', '${c.name}')">${c.detail ? `<div id="tooltip-${c.id}" class="absolute inset-3 bg-slate-900/90 text-white rounded-lg flex items-center justify-center p-2 opacity-0 invisible transition-all duration-200 z-10 pointer-events-none text-center"><p class="text-[12px] leading-snug font-medium">${c.detail}</p></div>` : ''}<div><div class="flex items-center justify-between gap-1"><div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1 pr-1">${c.name}</div>${c.detail ? `<div class="cursor-help flex items-center" onclick="showTooltip('${c.id}', event)"><i class="fa-solid fa-circle-info text-slate-300 text-[15px]"></i></div>` : ''}</div><div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div></div><div class="flex flex-col items-end pb-1.5 relative"><div class="absolute bottom-full right-6 mb-0.5 whitespace-nowrap">${isP ? `<span class="text-sm font-black ${diff > 0 ? "text-orange-500" : "text-blue-500"} leading-none">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</span>` : ''}</div><div class="flex items-baseline gap-1"><div class="text-3xl font-black text-[#1e293b] leading-none">${cur.toLocaleString(undefined,{minimumFractionDigits:1})}</div><div class="text-xs font-bold text-slate-500">Kg</div></div></div></div>`;
+                var orig = reg[c.id] || 0, vCorr = correctionValues[c.id] !== undefined ? correctionValues[c.id] : orig, vIn = inputValues[c.id] || 0, v = vCorr + vIn, diff = v - orig, isP = Math.abs(diff) >= 0.01;
+                return `<div class="app-card relative p-2.5 flex flex-col justify-between h-28 active:scale-95 transition-all overflow-hidden ${isP ? "border-2 border-orange-500 bg-orange-50/20" : (v > 0 ? "border-2 border-emerald-500 bg-emerald-50/20" : "border-2 border-slate-200 bg-white")}" onclick="openSlider('${c.id}', '${c.name}')">${c.detail ? `<div id="tooltip-${c.id}" class="absolute inset-3 bg-slate-900/90 text-white rounded-lg flex items-center justify-center p-2 opacity-0 invisible transition-all duration-200 z-10 pointer-events-none text-center"><p class="text-[12px] leading-snug font-medium">${c.detail}</p></div>` : ''}<div><div class="flex items-center justify-between gap-1"><div class="text-base font-bold truncate text-[#1e293b] leading-tight flex-1 pr-1">${c.name}</div>${c.detail ? `<div class="cursor-help flex items-center" onclick="showTooltip('${c.id}', event)"><i class="fa-solid fa-circle-info text-slate-300 text-[15px]"></i></div>` : ''}</div><div class="text-[14px] text-slate-400 font-medium leading-none mt-1">ID: ${c.id}</div></div><div class="flex flex-col items-end pb-1.5 relative"><div class="absolute bottom-full right-6 mb-0.5 whitespace-nowrap">${isP ? `<span class="text-sm font-black ${diff > 0 ? "text-orange-500" : "text-blue-500"} leading-none">${diff > 0 ? "+" : ""}${diff.toFixed(1)}</span>` : ''}</div><div class="flex items-baseline gap-1"><div class="text-3xl font-black text-[#1e293b] leading-none">${v.toLocaleString(undefined,{minimumFractionDigits:1})}</div><div class="text-xs font-bold text-slate-500">Kg</div></div></div></div>`;
             }).join('');
         }
 
