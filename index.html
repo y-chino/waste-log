@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-    <title>廃棄物報告 - v1.0.6</title>
+    <title>廃棄物報告 - v1.0.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -244,14 +244,10 @@
                         </div>
                     </div>
                     <div id="calendar-slide-wrapper" class="slide-content">
-                        <div class="grid grid-cols-7 mb-1 mt-0 items-center">
-                            <div class="flex justify-center">
-                                <button id="btn-prev-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-left text-xs"></i></button>
-                            </div>
-                            <h3 id="calendar-title" class="text-base font-black text-[#1e293b] tracking-tight col-span-5 text-center">---</h3>
-                            <div class="flex justify-center">
-                                <button id="btn-next-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-right text-xs"></i></button>
-                            </div>
+                        <div class="flex items-center justify-between mb-1 mt-0">
+                            <button id="btn-prev-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-left text-xs"></i></button>
+                            <h3 id="calendar-title" class="text-base font-black text-[#1e293b] tracking-tight text-center">---</h3>
+                            <button id="btn-next-month" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 active:bg-slate-200 transition-all"><i class="fas fa-chevron-right text-xs"></i></button>
                         </div>
                         <div class="grid grid-cols-7 gap-px text-center font-bold text-[11px] mb-1 uppercase text-[#334155] tracking-widest">
                             <span class="text-sunday">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="text-saturday">土</span>
@@ -264,12 +260,20 @@
             <div id="view-main-sticky" class="hidden">
                 <div id="room-nav-label" class="px-1 flex items-center justify-between">
                     <div class="flex items-center gap-2">
+                        <button id="btn-room-prev" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-all disabled:opacity-30 disabled:cursor-not-allowed invisible">
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </button>
                         <div class="flex items-center gap-2">
                             <i class="fas fa-door-open text-base text-emerald-600"></i>
                             <span id="current-room-display-name" class="text-lg font-black text-[#1e293b]">場所：---</span>
                         </div>
                     </div>
-                    <div id="room-dots-container" class="flex items-center gap-1.5"></div>
+                    <div class="flex items-center gap-2">
+                        <div id="room-dots-container" class="flex items-center gap-1.5"></div>
+                        <button id="btn-room-next" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-all disabled:opacity-30 disabled:cursor-not-allowed invisible">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -287,7 +291,7 @@
                         <i class="fas fa-info-circle text-slate-500 text-base mr-3"></i>
                         <h2 class="text-lg font-black text-[#1e293b]">アプリ説明</h2>
                     </div>
-                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.6</span>
+                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.7</span>
                 </div>
             </div>
             <div id="calendar-separator" class="h-px bg-slate-200 w-full mt-1"></div>
@@ -382,8 +386,8 @@
                     <div class="app-card p-4 border-2 border-slate-200 relative overflow-hidden">
                         <div class="relative flex items-center justify-center mb-4 min-h-[28px]">
                             <span id="lock-badge" class="absolute left-0 px-2 py-1 text-sm font-black rounded-lg uppercase tracking-tighter shadow-sm transition-all duration-300 z-10 border border-transparent">LOCKED</span>
-                            <span class="relative flex items-center">
-                                <i class="fas fa-map-marker-alt text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
+                            <span class="flex items-center gap-2">
+                                <i class="fas fa-map-marker-alt text-emerald-600"></i>
                                 <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">01. 拠点</label>
                             </span>
                         </div>
@@ -396,8 +400,8 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div class="app-card p-4 border-2 border-slate-200">
                             <div class="flex justify-center items-center mb-4">
-                                <span class="relative flex items-center">
-                                    <i class="fas fa-building text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-building text-emerald-600"></i>
                                     <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">02. 所属/建屋</label>
                                 </span>
                             </div>
@@ -405,8 +409,8 @@
                         </div>
                         <div class="app-card p-4 border-2 border-slate-200">
                             <div class="flex justify-center items-center mb-4">
-                                <span class="relative flex items-center">
-                                    <i class="fas fa-door-open text-emerald-600 absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2"></i>
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-door-open text-emerald-600"></i>
                                     <label class="text-base font-bold text-[#334155] uppercase tracking-widest whitespace-nowrap leading-none">03. 場所</label>
                                 </span>
                             </div>
@@ -643,6 +647,9 @@
             document.getElementById('btn-clear-changes').addEventListener('click', clearChanges);
             document.getElementById('btn-reg-back').addEventListener('click', function() { if(!this.disabled) showMainView(false); });
             document.getElementById('btn-back-description').addEventListener('click', function() { if (!state.userExists || !state.isRegLocked) showRegistrationView(); else showMainView(false); });
+            document.getElementById('btn-room-prev').addEventListener('click', function() { animateRoomSwitch(-1); });
+            document.getElementById('btn-room-next').addEventListener('click', function() { animateRoomSwitch(1); });
+            document.addEventListener('keydown', function(e) { if (activeSliderCatId || document.getElementById('view-main').classList.contains('hidden') || ['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return; if (e.key === 'ArrowLeft') animateRoomSwitch(-1); else if (e.key === 'ArrowRight') animateRoomSwitch(1); });
             document.querySelectorAll('.btn-adjust').forEach(btn => { btn.addEventListener('click', function() { adjustValue(parseInt(this.dataset.val)); }); });
         }
 
@@ -1060,6 +1067,8 @@
             var cont = document.getElementById('input-rows'), myB = state.userSetting?.base, curRoomId = String(state.userSetting?.roomId || "").trim(), room = state.locations.find(l => String(l.id).trim() === curRoomId);
             document.getElementById('current-room-display-name').innerText = "場所：" + (room ? room.name : "---");
             var dots = document.getElementById('room-dots-container'); if (dots) dots.innerHTML = state.roomsInDept.map((r, i) => `<div class="h-1.5 rounded-full transition-all duration-300 ${i === state.activeRoomIndex ? 'w-4 bg-emerald-600' : 'w-1.5 bg-slate-200'}"></div>`).join('');
+            var prevBtn = document.getElementById('btn-room-prev'), nextBtn = document.getElementById('btn-room-next');
+            if (prevBtn && nextBtn) { var hasMulti = state.roomsInDept.length > 1; prevBtn.classList.toggle('invisible', !hasMulti); nextBtn.classList.toggle('invisible', !hasMulti); prevBtn.disabled = state.activeRoomIndex === 0; nextBtn.disabled = state.activeRoomIndex >= state.roomsInDept.length - 1; }
             var reg = state.registeredData[state.selectedDate]?.[curRoomId]?.cats || {};
             cont.innerHTML = state.categories.filter(c => isCategoryAllowed(c, myB)).map(c => {
                 var orig = reg[c.id] || 0, vCorr = correctionValues[c.id] !== undefined ? correctionValues[c.id] : orig, vIn = inputValues[c.id] || 0, v = vCorr + vIn, diff = v - orig, isP = Math.abs(diff) >= 0.01;

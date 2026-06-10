@@ -1,5 +1,5 @@
 /**
- * 廃棄物報告アプリ - Backend Logic (v1.0.6 - Optimized)
+ * 廃棄物報告アプリ - Backend Logic (v1.0.7 - Optimized)
  */
 
 var APP_TITLE = "廃棄物報告";
