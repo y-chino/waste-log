@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PC向け場所切替機能 — v1.0.7</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+  * { font-family: 'Noto Sans JP', sans-serif; box-sizing: border-box; }
+  body { margin: 0; background: #0f172a; overflow: hidden; height: 100vh; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 3rem 4rem;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: #059669; color: white;
+    font-size: 0.75rem; font-weight: 900;
+    padding: 0.25rem 0.75rem; border-radius: 999px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .nav-bar {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 1rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    padding: 0.5rem 1.25rem; border-radius: 999px;
+    z-index: 100;
+  }
+  .nav-btn {
+    width: 2rem; height: 2rem; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: none; color: white;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.2); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .dot-container { display: flex; gap: 0.4rem; }
+  .dot {
+    width: 0.4rem; height: 0.4rem; border-radius: 50%;
+    background: rgba(255,255,255,0.3); transition: all 0.3s;
+  }
+  .dot.active { width: 1.2rem; border-radius: 999px; background: #059669; }
+  .slide-num { color: rgba(255,255,255,0.4); font-size: 0.7rem; font-weight: 700; min-width: 3rem; text-align: center; }
+
+  .key-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #1e293b; border: 1px solid #334155;
+    border-bottom: 3px solid #475569;
+    color: #cbd5e1; font-size: 0.85rem; font-weight: 700;
+    padding: 0.3rem 0.6rem; border-radius: 0.4rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .mock-bar {
+    background: white; border-radius: 0.75rem;
+    border: 2px solid #e2e8f0;
+    display: flex; align-items: center;
+    height: 3rem; overflow: hidden;
+  }
+  .mock-btn {
+    width: 2rem; height: 2rem; border-radius: 50%;
+    background: #f1f5f9; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #64748b; font-size: 0.65rem; margin: 0 0.4rem; flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .mock-btn:disabled { opacity: 0.3; }
+  .mock-label { flex: 1; text-align: center; font-weight: 900; font-size: 0.95rem; color: #1e293b; }
+  .mock-dots { display: flex; gap: 0.25rem; margin-right: 0.5rem; }
+  .mock-dot { width: 0.35rem; height: 0.35rem; border-radius: 50%; background: #e2e8f0; }
+  .mock-dot.cur { width: 1rem; border-radius: 999px; background: #059669; }
+
+  .highlight-box {
+    background: rgba(5,150,105,0.1);
+    border: 1px solid rgba(5,150,105,0.3);
+    border-radius: 1rem; padding: 1.25rem 1.5rem;
+  }
+  .warning-box {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 1rem; padding: 1.25rem 1.5rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Slide 1: Title ===== -->
+<div class="slide active" id="slide-0">
+  <div class="text-center">
+    <div class="badge"><i class="fas fa-desktop"></i> v1.0.7 新機能</div>
+    <h1 class="text-5xl font-black text-white mt-2 leading-tight">
+      PC向け<br><span class="text-emerald-400">場所切替機能</span>の追加
+    </h1>
+    <p class="text-slate-400 text-lg mt-6">廃棄物報告アプリ — v1.0.7 アップデート</p>
+    <div class="flex items-center justify-center gap-6 mt-10 text-slate-500 text-sm">
+      <span><i class="fas fa-calendar-alt mr-2"></i>2026/06/10</span>
+      <span><i class="fas fa-code-branch mr-2"></i>index.html</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Slide 2: 課題 ===== -->
+<div class="slide" id="slide-1">
+  <div class="w-full max-w-3xl">
+    <div class="badge"><i class="fas fa-exclamation-circle"></i> 課題</div>
+    <h2 class="text-4xl font-black text-white mb-8">スマホでしか場所を切替できなかった</h2>
+    <div class="grid grid-cols-2 gap-6">
+      <div class="warning-box">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+            <i class="fas fa-mobile-alt text-red-400 text-lg"></i>
+          </div>
+          <span class="text-white font-black text-lg">スマホ</span>
+          <span class="text-emerald-400 font-bold text-sm ml-auto">✓ 対応済</span>
+        </div>
+        <p class="text-slate-300 text-sm leading-relaxed">
+          カードエリアを<strong class="text-white">左右スワイプ</strong>することで、同一所属内の場所をスムーズに切り替えられた。
+        </p>
+      </div>
+      <div class="warning-box">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+            <i class="fas fa-desktop text-red-400 text-lg"></i>
+          </div>
+          <span class="text-white font-black text-lg">PC</span>
+          <span class="text-red-400 font-bold text-sm ml-auto">✗ 未対応</span>
+        </div>
+        <p class="text-slate-300 text-sm leading-relaxed">
+          タッチ操作がないため、<strong class="text-white">場所を切り替える手段が存在しなかった。</strong><br>
+          最初に設定した場所しか使えない状態。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Slide 3: 解決策 ===== -->
+<div class="slide" id="slide-2">
+  <div class="w-full max-w-3xl">
+    <div class="badge"><i class="fas fa-check-circle"></i> 解決策</div>
+    <h2 class="text-4xl font-black text-white mb-8">2つの操作方法を追加</h2>
+    <div class="grid grid-cols-2 gap-6">
+      <div class="highlight-box">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <i class="fas fa-hand-pointer text-emerald-400 text-lg"></i>
+          </div>
+          <span class="text-white font-black text-lg">‹ › ボタン</span>
+        </div>
+        <p class="text-slate-300 text-sm leading-relaxed mb-4">
+          場所名バーの左右に矢印ボタンを配置。クリックで前後の場所に切り替え。
+        </p>
+        <div class="mock-bar">
+          <button class="mock-btn" disabled><i class="fas fa-chevron-left"></i></button>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:center;">
+            <i class="fas fa-door-open" style="color:#059669;font-size:0.8rem;"></i>
+            <span class="mock-label" style="flex:initial;font-size:0.85rem;">場所：Mirai</span>
+          </div>
+          <div class="mock-dots">
+            <div class="mock-dot cur"></div>
+            <div class="mock-dot"></div>
+            <div class="mock-dot"></div>
+          </div>
+          <button class="mock-btn"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </div>
+      <div class="highlight-box">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <i class="fas fa-keyboard text-emerald-400 text-lg"></i>
+          </div>
+          <span class="text-white font-black text-lg">キーボード操作</span>
+        </div>
+        <p class="text-slate-300 text-sm leading-relaxed mb-4">
+          メインビュー表示中、入力フォームに フォーカスがない状態でキー操作が有効。
+        </p>
+        <div class="flex items-center justify-center gap-3 mt-4">
+          <span class="key-chip"><i class="fas fa-chevron-left"></i></span>
+          <span class="text-slate-400 font-bold text-sm">前の場所</span>
+          <span class="text-slate-600 mx-2">/</span>
+          <span class="text-slate-400 font-bold text-sm">次の場所</span>
+          <span class="key-chip"><i class="fas fa-chevron-right"></i></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Slide 4: ボタンの仕様 ===== -->
+<div class="slide" id="slide-3">
+  <div class="w-full max-w-3xl">
+    <div class="badge"><i class="fas fa-sliders-h"></i> ボタン詳細仕様</div>
+    <h2 class="text-4xl font-black text-white mb-8">‹ › ボタンの表示ルール</h2>
+    <div class="space-y-4">
+      <div class="highlight-box flex items-start gap-4">
+        <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-white font-black text-sm">1</span>
+        </div>
+        <div>
+          <p class="text-white font-black mb-1">複数場所がある場合のみ表示</p>
+          <p class="text-slate-400 text-sm">同一所属（Dept）内に場所が1つだけの場合、ボタンは非表示（invisible）。レイアウトは変化しない。</p>
+        </div>
+      </div>
+      <div class="highlight-box flex items-start gap-4">
+        <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-white font-black text-sm">2</span>
+        </div>
+        <div>
+          <p class="text-white font-black mb-1">端では非活性（Disabled）</p>
+          <p class="text-slate-400 text-sm">先頭では ‹ ボタンが、末尾では › ボタンが 30% 透明になりクリック不可。</p>
+        </div>
+      </div>
+      <div class="highlight-box flex items-start gap-4">
+        <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-white font-black text-sm">3</span>
+        </div>
+        <div>
+          <p class="text-white font-black mb-1">カレンダーボタンと縦位置を揃えた</p>
+          <p class="text-slate-400 text-sm">月移動ボタンも同時に flex 化し、場所ナビのボタンと垂直に揃えて視覚的統一感を確保。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Slide 5: キーボード仕様 ===== -->
+<div class="slide" id="slide-4">
+  <div class="w-full max-w-3xl">
+    <div class="badge"><i class="fas fa-keyboard"></i> キーボード操作詳細</div>
+    <h2 class="text-4xl font-black text-white mb-8">有効・無効の条件</h2>
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <p class="text-emerald-400 font-black text-lg mb-3 flex items-center gap-2">
+          <i class="fas fa-check-circle"></i> 有効になる条件（AND）
+        </p>
+        <div class="space-y-3">
+          <div class="highlight-box text-sm text-slate-300">
+            <i class="fas fa-eye text-emerald-400 mr-2"></i>メインビューが表示されている
+          </div>
+          <div class="highlight-box text-sm text-slate-300">
+            <i class="fas fa-times-circle text-emerald-400 mr-2"></i>計量スライダーが開いていない
+          </div>
+          <div class="highlight-box text-sm text-slate-300">
+            <i class="fas fa-font text-emerald-400 mr-2"></i>INPUT / SELECT 等にフォーカスがない
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="text-red-400 font-black text-lg mb-3 flex items-center gap-2">
+          <i class="fas fa-ban"></i> 無効になるケース
+        </p>
+        <div class="space-y-3">
+          <div class="warning-box text-sm text-slate-300">
+            <i class="fas fa-layer-group text-red-400 mr-2"></i>計量パネル（スライダー）表示中
+          </div>
+          <div class="warning-box text-sm text-slate-300">
+            <i class="fas fa-user-cog text-red-400 mr-2"></i>設定画面・説明画面を表示中
+          </div>
+          <div class="warning-box text-sm text-slate-300">
+            <i class="fas fa-i-cursor text-red-400 mr-2"></i>数値入力フォームを操作中
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Slide 6: 実装 ===== -->
+<div class="slide" id="slide-5">
+  <div class="w-full max-w-3xl">
+    <div class="badge"><i class="fas fa-code"></i> 実装サマリー</div>
+    <h2 class="text-4xl font-black text-white mb-8">変更した箇所</h2>
+    <div class="space-y-3">
+      <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-file-code text-blue-400"></i>
+        </div>
+        <div class="flex-1">
+          <p class="text-white font-black text-sm">HTML — room-nav-label</p>
+          <p class="text-slate-400 text-xs mt-0.5">btn-room-prev / btn-room-next を追加。カレンダーヘッダーを grid → flex に変更。</p>
+        </div>
+        <span class="text-slate-500 text-xs font-mono">+8行</span>
+      </div>
+      <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-cogs text-purple-400"></i>
+        </div>
+        <div class="flex-1">
+          <p class="text-white font-black text-sm">JS — renderCategoryCards()</p>
+          <p class="text-slate-400 text-xs mt-0.5">ボタンの visible / disabled を roomsInDept と activeRoomIndex から算出して反映。</p>
+        </div>
+        <span class="text-slate-500 text-xs font-mono">+2行</span>
+      </div>
+      <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-bolt text-emerald-400"></i>
+        </div>
+        <div class="flex-1">
+          <p class="text-white font-black text-sm">JS — initEventListeners()</p>
+          <p class="text-slate-400 text-xs mt-0.5">ボタンの click ハンドラと、document への keydown リスナーを追加。</p>
+        </div>
+        <span class="text-slate-500 text-xs font-mono">+2行</span>
+      </div>
+    </div>
+    <p class="text-slate-500 text-xs mt-5 text-center">既存機能（スワイプ・animateRoomSwitch）はそのまま流用。GASバックエンドへの変更なし。</p>
+  </div>
+</div>
+
+<!-- ===== Slide 7: まとめ ===== -->
+<div class="slide" id="slide-6">
+  <div class="text-center max-w-2xl">
+    <div class="w-20 h-20 rounded-2xl bg-emerald-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-900/50">
+      <i class="fas fa-check text-white text-3xl"></i>
+    </div>
+    <h2 class="text-4xl font-black text-white mb-4">スマホ・PCで同じ体験に</h2>
+    <p class="text-slate-400 text-lg mb-8 leading-relaxed">
+      タッチ操作のないPC環境でも、ボタンまたはキーボードで<br>直感的に場所を切り替えられるようになりました。
+    </p>
+    <div class="flex items-center justify-center gap-8 text-sm">
+      <div class="flex items-center gap-2 text-emerald-400 font-black">
+        <i class="fas fa-mobile-alt text-xl"></i>
+        <span>スワイプ</span>
+      </div>
+      <span class="text-slate-600 font-black text-2xl">+</span>
+      <div class="flex items-center gap-2 text-emerald-400 font-black">
+        <i class="fas fa-hand-pointer text-xl"></i>
+        <span>クリック</span>
+      </div>
+      <span class="text-slate-600 font-black text-2xl">+</span>
+      <div class="flex items-center gap-2 text-emerald-400 font-black">
+        <i class="fas fa-keyboard text-xl"></i>
+        <span>キーボード</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav-bar">
+  <button class="nav-btn" id="btn-prev" onclick="changeSlide(-1)" disabled>
+    <i class="fas fa-chevron-left text-xs"></i>
+  </button>
+  <div class="dot-container" id="dots"></div>
+  <button class="nav-btn" id="btn-next" onclick="changeSlide(1)">
+    <i class="fas fa-chevron-right text-xs"></i>
+  </button>
+  <span class="slide-num" id="slide-num">1 / 7</span>
+</div>
+
+<script>
+  const TOTAL = 7;
+  let cur = 0;
+
+  const dots = document.getElementById('dots');
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    d.style.cursor = 'pointer';
+    dots.appendChild(d);
+  }
+
+  function goTo(n) {
+    document.getElementById('slide-' + cur).classList.remove('active');
+    dots.children[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(TOTAL - 1, n));
+    document.getElementById('slide-' + cur).classList.add('active');
+    dots.children[cur].classList.add('active');
+    document.getElementById('btn-prev').disabled = cur === 0;
+    document.getElementById('btn-next').disabled = cur === TOTAL - 1;
+    document.getElementById('slide-num').textContent = (cur + 1) + ' / ' + TOTAL;
+  }
+
+  function changeSlide(dir) { goTo(cur + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') changeSlide(1);
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') changeSlide(-1);
+  });
+</script>
+</body>
+</html>

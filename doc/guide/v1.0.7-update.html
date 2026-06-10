@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>廃棄物報告アプリ アップデート v1.0.7</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+  * { font-family: 'Noto Sans JP', sans-serif; }
+  body { background: #f8fafc; color: #1e293b; }
+
+  @media print {
+    body { background: white; }
+    .no-print { display: none !important; }
+  }
+
+  .today-striped {
+    background: repeating-linear-gradient(135deg, #f0fdf4, #f0fdf4 2.5px, #86efac 2.5px, #86efac 4px);
+  }
+
+  /* mock UI */
+  .mock-nav {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.75rem;
+    height: 2.75rem;
+    display: flex;
+    align-items: center;
+    padding: 0 0.5rem;
+    gap: 0.25rem;
+  }
+  .mock-btn {
+    width: 1.75rem; height: 1.75rem;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem;
+    flex-shrink: 0;
+  }
+  .mock-btn-on  { background: #f1f5f9; color: #475569; }
+  .mock-btn-off { background: #f1f5f9; color: #cbd5e1; }
+  .mock-center { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+  .mock-dots { display: flex; gap: 0.2rem; align-items: center; }
+  .mock-dot { width: 0.35rem; height: 0.35rem; border-radius: 50%; background: #e2e8f0; }
+  .mock-dot.on { width: 0.9rem; border-radius: 999px; background: #059669; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="max-w-xl mx-auto px-6 py-12">
+
+  <!-- Header -->
+  <div class="mb-10">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+        <i class="fas fa-recycle text-white"></i>
+      </div>
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">廃棄物報告アプリ</p>
+        <p class="text-xs font-bold text-slate-400 leading-none">2026年6月10日</p>
+      </div>
+    </div>
+    <h1 class="text-3xl font-black text-slate-900 leading-tight mb-3">
+      アップデート<br><span class="text-emerald-600">v1.0.7</span> をリリースしました
+    </h1>
+    <p class="text-slate-500 text-sm leading-relaxed">
+      PCからでも場所を切り替えられるよう、操作方法を追加しました。
+    </p>
+  </div>
+
+  <hr class="border-slate-200 mb-10">
+
+  <!-- Feature 1 -->
+  <div class="mb-10">
+    <div class="flex items-center gap-2 mb-1">
+      <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-black flex items-center justify-center flex-shrink-0">1</span>
+      <h2 class="text-xl font-black text-slate-900">場所切替ボタンを追加</h2>
+    </div>
+    <p class="text-slate-500 text-sm mb-5 ml-8">
+      報告メイン画面の「場所」表示バーに、左右の切替ボタンが表示されるようになりました。
+    </p>
+
+    <!-- Before / After -->
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      <div>
+        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Before</p>
+        <div class="mock-nav">
+          <div class="mock-center">
+            <i class="fas fa-door-open text-emerald-600" style="font-size:0.75rem;"></i>
+            <span class="text-sm font-black text-slate-800">場所：Mirai</span>
+          </div>
+          <div class="mock-dots">
+            <div class="mock-dot on"></div>
+            <div class="mock-dot"></div>
+            <div class="mock-dot"></div>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400 mt-2 ml-1">ボタンなし。PC では切替不可。</p>
+      </div>
+      <div>
+        <p class="text-xs font-black text-emerald-600 uppercase tracking-widest mb-2 ml-1">After</p>
+        <div class="mock-nav" style="border-color:#a7f3d0;">
+          <div class="mock-btn mock-btn-off"><i class="fas fa-chevron-left"></i></div>
+          <div class="mock-center">
+            <i class="fas fa-door-open text-emerald-600" style="font-size:0.75rem;"></i>
+            <span class="text-sm font-black text-slate-800">場所：Mirai</span>
+          </div>
+          <div class="mock-dots">
+            <div class="mock-dot on"></div>
+            <div class="mock-dot"></div>
+            <div class="mock-dot"></div>
+          </div>
+          <div class="mock-btn mock-btn-on"><i class="fas fa-chevron-right"></i></div>
+        </div>
+        <p class="text-xs text-emerald-600 font-bold mt-2 ml-1">‹ › ボタンで切替できるように。</p>
+      </div>
+    </div>
+
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600 space-y-1.5">
+      <p><i class="fas fa-check text-emerald-500 mr-2"></i>同じ所属に複数の場所がある場合のみ表示されます</p>
+      <p><i class="fas fa-check text-emerald-500 mr-2"></i>先頭・末尾では対応するボタンが淡色になり押せなくなります</p>
+    </div>
+  </div>
+
+  <!-- Feature 2 -->
+  <div class="mb-10">
+    <div class="flex items-center gap-2 mb-1">
+      <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-black flex items-center justify-center flex-shrink-0">2</span>
+      <h2 class="text-xl font-black text-slate-900">キーボード操作に対応</h2>
+    </div>
+    <p class="text-slate-500 text-sm mb-5 ml-8">
+      メイン画面を開いた状態で、キーボードの矢印キーでも場所を切り替えられます。
+    </p>
+
+    <div class="flex items-center justify-center gap-4 py-6 bg-slate-50 border border-slate-200 rounded-xl mb-5">
+      <div class="flex flex-col items-center gap-1.5">
+        <div class="w-12 h-12 rounded-xl bg-white border-2 border-slate-300 border-b-4 flex items-center justify-center shadow-sm">
+          <i class="fas fa-chevron-left text-slate-600 text-base"></i>
+        </div>
+        <span class="text-xs font-bold text-slate-500">前の場所</span>
+      </div>
+      <div class="text-slate-300 font-black text-xl">—</div>
+      <div class="flex flex-col items-center gap-1.5">
+        <div class="w-12 h-12 rounded-xl bg-white border-2 border-slate-300 border-b-4 flex items-center justify-center shadow-sm">
+          <i class="fas fa-chevron-right text-slate-600 text-base"></i>
+        </div>
+        <span class="text-xs font-bold text-slate-500">次の場所</span>
+      </div>
+    </div>
+
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600 space-y-1.5">
+      <div class="flex items-start gap-2"><i class="fas fa-check text-emerald-500 flex-shrink-0 mt-0.5"></i><span>数値入力中は誤作動しません（入力フォームにフォーカスがある間は無効）</span></div>
+      <div class="flex items-start gap-2"><i class="fas fa-check text-emerald-500 flex-shrink-0 mt-0.5"></i><span>計量パネルが開いている間は無効になります</span></div>
+    </div>
+  </div>
+
+  <hr class="border-slate-200 mb-8">
+
+  <!-- Footer -->
+  <div class="text-center">
+    <p class="text-sm font-bold text-slate-400 mb-1">スマホはこれまで通りスワイプで操作できます</p>
+    <p class="text-xs text-slate-300">廃棄物報告アプリ v1.0.7 — Mipox株式会社</p>
+  </div>
+
+</div>
+
+</body>
+</html>
