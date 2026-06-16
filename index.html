@@ -532,7 +532,7 @@
                 if (!rawPayload || rawPayload === "null" || rawPayload === "undefined" || rawPayload === "") {
                   google.script.run.withSuccessHandler(function(decoded) {
                     processInitialData(decoded, userEmail);
-                  }).getInitialDataForApp(userEmail);
+                  }).getInitialAppData();
                 } else {
                   var decoded = JSON.parse(rawPayload);
                   processInitialData(decoded, userEmail);

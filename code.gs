@@ -101,14 +101,17 @@ function getOrRegisterUserName_(email) {
 }
 
 /**
- * 初期データ取得（効率化：所属データのみ・3ヶ月分）
+ * 初期データ一括取得（パラメータなし・Session からメール取得）
  */
-function getInitialDataForApp(userEmail) {
+function getInitialAppData() {
+  var userEmail = Session.getActiveUser().getEmail()
+               || Session.getEffectiveUser().getEmail()
+               || "anonymous@mipox.co.jp";
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var userName = getOrRegisterUserName_(userEmail);
-  if (!userName && userEmail) { userName = userEmail.split('@')[0]; }
+  if (!userName) { userName = userEmail.split('@')[0]; }
 
-  // マスター取得
   var catData = ss.getSheetByName(SHEETS.CATEGORY).getDataRange().getValues();
   var categories = catData.slice(1).map(function(r) {
     return { id: String(r[0]).trim(), name: String(r[1]).trim(), detail: String(r[2] || "").trim(), targetBase: String(r[3] || "").trim() };
@@ -119,7 +122,6 @@ function getInitialDataForApp(userEmail) {
     return { id: String(r[0]).trim(), name: String(r[1]).trim(), dept: String(r[2]).trim(), base: String(r[3]).trim() };
   });
 
-  // ユーザー設定取得
   var userData = ss.getSheetByName(SHEETS.USER_SETTING).getDataRange().getValues();
   var userSetting = null;
   var userExists = false;
@@ -131,12 +133,10 @@ function getInitialDataForApp(userEmail) {
     }
   }
 
-  // Config取得
   var configSheet = ss.getSheetByName(SHEETS.CONFIG);
   var feedbackUrl = "", summaryUrl = "";
   if (configSheet) {
-    var configValues = configSheet.getDataRange().getValues();
-    configValues.forEach(function(row) {
+    configSheet.getDataRange().getValues().forEach(function(row) {
       var key = String(row[0]).trim().toUpperCase();
       if (key === "FEEDBACK") feedbackUrl = String(row[1]).trim();
       if (key === "SUMMARY") summaryUrl = String(row[1]).trim();
@@ -145,97 +145,91 @@ function getInitialDataForApp(userEmail) {
 
   var registeredData = {};
   if (userExists) {
-    // 効率化：自分の所属（Dept）を特定
-    var myRoomId = userSetting.roomId;
-    var myLoc = locations.find(function(l) { return l.id === myRoomId; });
-    var myDept = myLoc ? myLoc.dept : null;
-    
-    // 所属建屋内の全ルームIDを取得
-    var targetRoomIds = locations.filter(function(l) { 
-      return l.dept === myDept && l.base === userSetting.base; 
-    }).map(function(l) { return l.id; });
+    var myLoc = locations.find(function(l) { return l.id === userSetting.roomId; });
+    if (myLoc) {
+      var targetRoomIds = locations.filter(function(l) {
+        return l.dept === myLoc.dept && l.base === userSetting.base;
+      }).map(function(l) { return l.id; });
 
-    var wasteData = ss.getSheetByName(SHEETS.DATA).getDataRange().getValues();
-    var now = new Date();
-    var thresholdDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // 3ヶ月分
-    registeredData = processWasteRows_(wasteData, thresholdDate, null, targetRoomIds);
+      var now = new Date();
+      for (var i = 0; i < 3; i++) {
+        var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        var monthStr = d.getFullYear() + "年" + ("0" + (d.getMonth() + 1)).slice(-2) + "月";
+        Object.assign(registeredData, readMonthData_(ss, monthStr, targetRoomIds));
+      }
+    }
   }
 
   return {
-    locations: locations,
-    categories: categories,
-    userSetting: userSetting,
-    userExists: userExists,
-    registeredData: registeredData,
-    feedbackUrl: feedbackUrl,
-    summaryUrl: summaryUrl,
-    userName: userName,
-    serverTime: Date.now()
+    locations: locations, categories: categories, userSetting: userSetting,
+    userExists: userExists, registeredData: registeredData,
+    feedbackUrl: feedbackUrl, summaryUrl: summaryUrl,
+    userName: userName, serverTime: Date.now()
   };
 }
 
 /**
- * 過去データ取得（効率化：所属データのみ）
+ * 過去データ取得（textFinder で対象月の行だけ読む）
  */
 function getPastWasteData(year, month) {
+  var userEmail = Session.getActiveUser().getEmail()
+               || Session.getEffectiveUser().getEmail()
+               || "anonymous@mipox.co.jp";
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var userEmail = Session.getActiveUser().getEmail() || "anonymous@mipox.co.jp";
-  
-  // ユーザーの所属ルーム特定
   var userData = ss.getSheetByName(SHEETS.USER_SETTING).getDataRange().getValues();
   var myRoomId = "";
   for (var k = 1; k < userData.length; k++) {
     if (userData[k][0] === userEmail) { myRoomId = String(userData[k][2]); break; }
   }
-  
   if (!myRoomId) return {};
 
   var locData = ss.getSheetByName(SHEETS.LOCATION).getDataRange().getValues();
   var myLoc = locData.find(function(r) { return String(r[0]) === myRoomId; });
-  var myDept = myLoc ? myLoc[2] : "";
-  var myBase = myLoc ? myLoc[3] : "";
-  
+  if (!myLoc) return {};
+
   var targetRoomIds = locData.slice(1).filter(function(r) {
-    return String(r[2]) === myDept && String(r[3]) === myBase;
+    return String(r[2]) === myLoc[2] && String(r[3]) === myLoc[3];
   }).map(function(r) { return String(r[0]); });
 
-  var wasteData = ss.getSheetByName(SHEETS.DATA).getDataRange().getValues();
-  var startDate = new Date(year, month - 1, 1);
-  var endDate = new Date(year, month, 0, 23, 59, 59);
-  
-  return processWasteRows_(wasteData, startDate, endDate, targetRoomIds);
+  var monthStr = year + "年" + ("0" + month).slice(-2) + "月";
+  return readMonthData_(ss, monthStr, targetRoomIds);
 }
 
-function processWasteRows_(data, minDate, maxDate, targetRoomIds) {
-  var results = {};
-  for (var n = data.length - 1; n >= 1; n--) { 
-    var row = data[n];
-    var rawDate = new Date(row[4]);
-    
-    // 効率化：指定期間より古くなったらループを終了（データが時系列であることを想定）
-    if (minDate && rawDate < minDate) break; 
-    if (maxDate && rawDate > maxDate) continue;
-    
-    var roomId = String(row[6]);
-    if (targetRoomIds && targetRoomIds.indexOf(roomId) === -1) continue; // 所属外はスキップ
+/**
+ * textFinder で指定月の行だけ読んでデータを集計する共通処理
+ */
+function readMonthData_(ss, monthStr, targetRoomIds) {
+  var sheet = ss.getSheetByName(SHEETS.DATA);
+  var finder = sheet.getRange("K:K").createTextFinder(monthStr);
+  var matches = finder.findAll();
+  if (matches.length === 0) return {};
 
-    var catId = String(row[1]);
-    var catName = String(row[2]);
-    var val = parseFloat(row[3]);
+  var startRow = matches[0].getRow();
+  var lastRow  = matches[matches.length - 1].getRow();
+  var data = sheet.getRange(startRow, 1, lastRow - startRow + 1, 15).getValues();
+
+  var results = {};
+  data.forEach(function(row) {
+    var roomId = String(row[6]);
+    if (targetRoomIds.indexOf(roomId) === -1) return;
+    var rawDate = new Date(row[4]);
     var dateStr = Utilities.formatDate(rawDate, "JST", "yyyy-MM-dd");
-    var user = String(row[12]);
-    var rawTime = row[13];
-    var time = (rawTime instanceof Date) ? Utilities.formatDate(rawTime, "JST", "yyyy/MM/dd HH:mm:ss") : String(rawTime);
-    
+    var catId   = String(row[1]);
+    var catName = String(row[2]);
+    var val     = parseFloat(row[3]);
+    var user    = String(row[12]);
+    var time    = (row[13] instanceof Date) ? Utilities.formatDate(row[13], "JST", "yyyy/MM/dd HH:mm:ss") : String(row[13]);
     if (!results[dateStr]) results[dateStr] = {};
-    if (!results[dateStr][roomId]) { results[dateStr][roomId] = { total: 0, cats: {}, logs: [] }; }
-    if (results[dateStr][roomId].cats[catId] === undefined) { results[dateStr][roomId].cats[catId] = val; }
+    if (!results[dateStr][roomId]) results[dateStr][roomId] = { total: 0, cats: {}, logs: [] };
+    if (results[dateStr][roomId].cats[catId] === undefined) results[dateStr][roomId].cats[catId] = val;
     results[dateStr][roomId].logs.push({ catId: catId, catName: catName, val: val, user: user, time: time });
-  }
+  });
+
   for (var d in results) {
     for (var r in results[d]) {
       var total = 0;
-      for (var c in results[d][r].cats) { total += results[d][r].cats[c]; }
+      for (var c in results[d][r].cats) total += results[d][r].cats[c];
       results[d][r].total = total;
     }
   }
