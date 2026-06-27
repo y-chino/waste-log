@@ -1,0 +1,7 @@
+doc/**
+bkup/**
+*.md
+*.gdoc
+.clasp.json
+.claspignore
+.gitignore
