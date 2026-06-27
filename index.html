@@ -495,8 +495,8 @@
                 registerUserSetting: function() { setTimeout(() => { if(this._s) this._s({success:true}); }, 500); }, 
                 executeSaveReport: function() { setTimeout(() => { if(this._s) this._s({success:true, user: 'デモユーザー', time: '2024/02/20 10:00:00'}); }, 500); },
                 getPastWasteData: function(y, m) { setTimeout(() => { if(this._s) this._s({}); }, 300); },
-                getInitialDataForApp: function() { 
-                  setTimeout(() => { if(this._s) this._s(getDemoData()); }, 1000); 
+                getInitialAppData: function() {
+                  setTimeout(() => { if(this._s) this._s(getDemoData()); }, 1000);
                 }
             } } }; 
         }
@@ -530,16 +530,20 @@
                 updateDateDisplay();
 
                 if (!rawPayload || rawPayload === "null" || rawPayload === "undefined" || rawPayload === "") {
+                  if (typeof google === 'undefined' || !google.script) {
+                    processInitialData(getDemoData(), userEmail);
+                  } else {
                   google.script.run.withSuccessHandler(function(decoded) {
                     processInitialData(decoded, userEmail);
                   }).getInitialAppData();
+                  }
                 } else {
                   var decoded = JSON.parse(rawPayload);
                   processInitialData(decoded, userEmail);
                 }
                 
                 initEventListeners(); initSwipeSupport();
-            } catch (e) { document.getElementById('loader').style.display = 'none'; }
+            } catch (e) { console.error('initApp error:', e); document.getElementById('loader').style.display = 'none'; }
         }
 
         function processInitialData(decoded, userEmail) {
@@ -592,8 +596,9 @@
 
         function getDemoData() { 
             return { 
-                userExists: false, 
-                userName: "デモユーザー", 
+                userExists: true,
+                userName: "デモユーザー",
+                userSetting: { base: "HP", roomId: "1" },
                 locations: [
                     { id: "1", name: "CR1", dept: "B01", base: "HP" },
                     { id: "7", name: "Mirai", dept: "B04", base: "HP" },
