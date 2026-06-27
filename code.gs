@@ -1,5 +1,5 @@
 /**
- * 廃棄物報告アプリ - Backend Logic (v1.0.7 - Optimized)
+ * 廃棄物報告アプリ - Backend Logic (v1.0.8 - Optimized)
  */
 
 var APP_TITLE = "廃棄物報告";
@@ -19,69 +19,19 @@ var SHEETS = {
 function doGet() {
   var template = HtmlService.createTemplateFromFile("index");
   var userEmail = Session.getActiveUser().getEmail() || "anonymous@mipox.co.jp";
-  
-  // payloadは空で返し、クライアントサイドの initApp から非同期で getInitialDataForApp を呼ぶことで
-  // 画面の枠組みを先に表示させる（体感速度向上）
-  template.initialPayload = "null";
+
+  // 初期データをサーバー側で組み立てて HTML に直接埋め込む
+  // → クライアント側の getInitialAppData() 往復をなくし、ローディング時間を短縮
+  var initialData = getInitialAppData();
+  template.initialPayload = JSON.stringify(initialData);
   template.userEmail = userEmail;
-  
+
   return template.evaluate()
     .setTitle(APP_TITLE)
     .addMetaTag("viewport", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/**
- * 組織の全ユーザーを同期する
- */
-function syncOrganizationUsers() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.USER_MASTER);
-  
-  if (typeof AdminDirectory === 'undefined') {
-    var errorMsg = "エラー: Admin SDK API が有効化されていません。";
-    Logger.log(errorMsg);
-    return errorMsg;
-  }
-
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEETS.USER_MASTER);
-    sheet.appendRow(["メールアドレス", "名前"]);
-    sheet.getRange("1:1").setFontWeight("bold").setBackground("#f3f3f3");
-    sheet.setFrozenRows(1);
-  }
-
-  var users = [];
-  var pageToken;
-  try {
-    do {
-      var response = AdminDirectory.Users.list({
-        customer: 'my_customer',
-        maxResults: 500,
-        pageToken: pageToken,
-        orderBy: 'email',
-        viewType: 'domain_public' 
-      });
-      if (response.users && response.users.length > 0) {
-        response.users.forEach(function(user) {
-          users.push([user.primaryEmail.toLowerCase(), user.name.fullName]);
-        });
-      }
-      pageToken = response.nextPageToken;
-    } while (pageToken);
-
-    if (users.length > 0) {
-      var lastRow = sheet.getLastRow();
-      if (lastRow > 1) { sheet.getRange(2, 1, lastRow - 1, 2).clearContent(); }
-      sheet.getRange(2, 1, users.length, 2).setValues(users);
-      SpreadsheetApp.flush(); 
-      return "同期完了: " + users.length + " 名を登録しました。";
-    }
-    return "ユーザーが見つかりませんでした。";
-  } catch (e) {
-    return "エラー: " + e.toString();
-  }
-}
 
 /**
  * 名簿から名前を取得
@@ -91,12 +41,43 @@ function getOrRegisterUserName_(email) {
   var lowEmail = email.toLowerCase();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.USER_MASTER);
-  if (!sheet) { syncOrganizationUsers(); sheet = ss.getSheetByName(SHEETS.USER_MASTER); }
-  
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]).toLowerCase() === lowEmail) { return data[i][1]; }
+
+  // シートがあれば検索
+  if (sheet) {
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).toLowerCase() === lowEmail) { return data[i][1]; }
+    }
   }
+
+  // 見つからなければ自分自身のプロフィールを取得（管理者権限不要）
+  try {
+    var token = ScriptApp.getOAuthToken();
+    var res = UrlFetchApp.fetch(
+      'https://www.googleapis.com/oauth2/v3/userinfo',
+      { headers: { 'Authorization': 'Bearer ' + token }, muteHttpExceptions: true }
+    );
+    var person = JSON.parse(res.getContentText());
+    var name = person.name || null;
+    if (name) {
+      var lock = LockService.getScriptLock();
+      lock.waitLock(5000);
+      try {
+        if (!sheet) {
+          sheet = ss.insertSheet(SHEETS.USER_MASTER);
+          sheet.appendRow(['メールアドレス', '名前']);
+          sheet.getRange('1:1').setFontWeight('bold').setBackground('#f3f3f3');
+          sheet.setFrozenRows(1);
+        }
+        var latest = sheet.getDataRange().getValues();
+        var alreadyAdded = latest.some(function(r) { return String(r[0]).toLowerCase() === lowEmail; });
+        if (!alreadyAdded) sheet.appendRow([email, name]);
+      } finally {
+        lock.releaseLock();
+      }
+      return name;
+    }
+  } catch(e) { }
   return null;
 }
 
@@ -109,18 +90,42 @@ function getInitialAppData() {
                || "anonymous@mipox.co.jp";
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // マスターデータはキャッシュ（5分）。ユーザー設定は毎回スプレッドシートから取得。
+  var cache = CacheService.getUserCache();
+  var masterCacheKey = 'master_data';
+  var master = null;
+  var cachedMaster = cache.get(masterCacheKey);
+  if (cachedMaster) {
+    master = JSON.parse(cachedMaster);
+  } else {
+    var catData = ss.getSheetByName(SHEETS.CATEGORY).getDataRange().getValues();
+    var categories = catData.slice(1).map(function(r) {
+      return { id: String(r[0]).trim(), name: String(r[1]).trim(), detail: String(r[2] || "").trim(), targetBase: String(r[3] || "").trim() };
+    });
+
+    var locData = ss.getSheetByName(SHEETS.LOCATION).getDataRange().getValues();
+    var locations = locData.slice(1).map(function(r) {
+      return { id: String(r[0]).trim(), name: String(r[1]).trim(), dept: String(r[2]).trim(), base: String(r[3]).trim() };
+    });
+
+    var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+    var feedbackUrl = "", summaryUrl = "";
+    if (configSheet) {
+      configSheet.getDataRange().getValues().forEach(function(row) {
+        var key = String(row[0]).trim().toUpperCase();
+        if (key === "FEEDBACK") feedbackUrl = String(row[1]).trim();
+        if (key === "SUMMARY") summaryUrl = String(row[1]).trim();
+      });
+    }
+
+    master = { categories: categories, locations: locations, feedbackUrl: feedbackUrl, summaryUrl: summaryUrl };
+    try { cache.put(masterCacheKey, JSON.stringify(master), 300); } catch(e) {}
+  }
+
+  // ユーザー設定は常に最新値を参照
   var userName = getOrRegisterUserName_(userEmail);
   if (!userName) { userName = userEmail.split('@')[0]; }
-
-  var catData = ss.getSheetByName(SHEETS.CATEGORY).getDataRange().getValues();
-  var categories = catData.slice(1).map(function(r) {
-    return { id: String(r[0]).trim(), name: String(r[1]).trim(), detail: String(r[2] || "").trim(), targetBase: String(r[3] || "").trim() };
-  });
-
-  var locData = ss.getSheetByName(SHEETS.LOCATION).getDataRange().getValues();
-  var locations = locData.slice(1).map(function(r) {
-    return { id: String(r[0]).trim(), name: String(r[1]).trim(), dept: String(r[2]).trim(), base: String(r[3]).trim() };
-  });
 
   var userData = ss.getSheetByName(SHEETS.USER_SETTING).getDataRange().getValues();
   var userSetting = null;
@@ -133,21 +138,11 @@ function getInitialAppData() {
     }
   }
 
-  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
-  var feedbackUrl = "", summaryUrl = "";
-  if (configSheet) {
-    configSheet.getDataRange().getValues().forEach(function(row) {
-      var key = String(row[0]).trim().toUpperCase();
-      if (key === "FEEDBACK") feedbackUrl = String(row[1]).trim();
-      if (key === "SUMMARY") summaryUrl = String(row[1]).trim();
-    });
-  }
-
   var registeredData = {};
   if (userExists) {
-    var myLoc = locations.find(function(l) { return l.id === userSetting.roomId; });
+    var myLoc = master.locations.find(function(l) { return l.id === userSetting.roomId; });
     if (myLoc) {
-      var targetRoomIds = locations.filter(function(l) {
+      var targetRoomIds = master.locations.filter(function(l) {
         return l.dept === myLoc.dept && l.base === userSetting.base;
       }).map(function(l) { return l.id; });
 
@@ -161,9 +156,9 @@ function getInitialAppData() {
   }
 
   return {
-    locations: locations, categories: categories, userSetting: userSetting,
-    userExists: userExists, registeredData: registeredData,
-    feedbackUrl: feedbackUrl, summaryUrl: summaryUrl,
+    locations: master.locations, categories: master.categories,
+    userSetting: userSetting, userExists: userExists, registeredData: registeredData,
+    feedbackUrl: master.feedbackUrl, summaryUrl: master.summaryUrl,
     userName: userName, serverTime: Date.now()
   };
 }
@@ -236,6 +231,13 @@ function readMonthData_(ss, monthStr, targetRoomIds) {
   return results;
 }
 
+function clearInitialDataCache_() {
+  var cache = CacheService.getUserCache();
+  cache.remove('master_data');
+  cache.remove('initial_data');
+}
+
+
 function registerUserSetting(base, roomId) {
   var userEmail = Session.getActiveUser().getEmail() || "anonymous@mipox.co.jp";
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -244,6 +246,7 @@ function registerUserSetting(base, roomId) {
   var foundRow = -1;
   for (var i = 1; i < data.length; i++) { if (data[i][0] === userEmail) { foundRow = i + 1; break; } }
   if (foundRow > 0) { sheet.getRange(foundRow, 2, 1, 2).setValues([[base, roomId]]); } else { sheet.appendRow([userEmail, base, roomId]); }
+  clearInitialDataCache_();
   return { success: true };
 }
 
@@ -285,5 +288,6 @@ function executeSaveReport(formData) {
       sheet.appendRow([lastRow + 1 + i, item.categoryId, item.categoryName, inputVal, formData.date, formData.baseName, formData.roomId, roomName, deptName, yearStr, monthStr, dateNumStr, userDisplayName, formattedNow, formData.baseName + "_" + roomName + "_" + item.categoryId + "_" + dateNumStr]);
     }
   }
+  clearInitialDataCache_();
   return { success: true, user: userDisplayName, time: formattedNow };
 }

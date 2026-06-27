@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-    <title>廃棄物報告 - v1.0.7</title>
+    <title>廃棄物報告 - v1.0.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -20,19 +20,39 @@
         
         .lock-scroll { overflow: hidden !important; height: 100vh !important; }
 
-        .loading-overlay { 
-            background: #ffffff; 
-            z-index: 9000; 
-            position: fixed; 
-            top: 141px; 
+        .loading-overlay {
+            background: #ffffff;
+            z-index: 9000;
+            position: absolute;
+            top: 141px;
             left: 0;
             right: 0;
             bottom: 0;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 1rem; 
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            padding: 1rem;
+            gap: 0.75rem;
+            overflow: hidden;
+        }
+
+        @keyframes shimmer {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(300%); }
+        }
+        .skel {
+            background-color: #e2e8f0;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        .skel::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.75), transparent);
+            animation: shimmer 1.4s ease-in-out infinite;
         }
         
         #slider-backdrop {
@@ -291,15 +311,66 @@
                         <i class="fas fa-info-circle text-slate-500 text-base mr-3"></i>
                         <h2 class="text-lg font-black text-[#1e293b]">アプリ説明</h2>
                     </div>
-                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.7</span>
+                    <span class="absolute bottom-1.5 right-2.5 text-[9px] font-medium text-slate-400">Version 1.0.8</span>
                 </div>
             </div>
             <div id="calendar-separator" class="h-px bg-slate-200 w-full mt-1"></div>
         </div>
 
         <div id="loader" class="loading-overlay">
-            <div class="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
-            <span class="text-slate-500 font-bold text-sm tracking-widest animate-pulse">読み込み中...</span>
+            <!-- calendar skeleton -->
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2 px-1">
+                    <div class="skel w-8 h-8 rounded-full"></div>
+                    <div class="skel h-4 w-24"></div>
+                    <div class="skel w-8 h-8 rounded-full"></div>
+                </div>
+                <div class="grid grid-cols-7 gap-px text-center mb-1">
+                    <div class="skel h-3 mx-1 rounded"></div>
+                    <div class="skel h-3 mx-1 rounded"></div>
+                    <div class="skel h-3 mx-1 rounded"></div>
+                    <div class="skel h-3 mx-1 rounded"></div>
+                    <div class="skel h-3 mx-1 rounded"></div>
+                    <div class="skel h-3 mx-1 rounded"></div>
+                    <div class="skel h-3 mx-1 rounded"></div>
+                </div>
+                <div class="grid grid-cols-7 gap-1">
+                    <!-- 5 rows × 7 cols = 35 cells -->
+                    <div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div>
+                    <div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div>
+                    <div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div>
+                    <div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div>
+                    <div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div><div class="skel h-8 rounded-lg"></div>
+                </div>
+            </div>
+            <div class="h-px bg-slate-100 mb-4"></div>
+            <!-- category cards skeleton -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-2xl border-2 border-slate-100 bg-white p-3 h-28 flex flex-col justify-between">
+                    <div><div class="skel h-4 w-3/4 mb-2"></div><div class="skel h-3 w-2/5"></div></div>
+                    <div class="flex justify-end"><div class="skel h-8 w-16"></div></div>
+                </div>
+                <div class="rounded-2xl border-2 border-slate-100 bg-white p-3 h-28 flex flex-col justify-between">
+                    <div><div class="skel h-4 w-2/3 mb-2"></div><div class="skel h-3 w-1/3"></div></div>
+                    <div class="flex justify-end"><div class="skel h-8 w-16"></div></div>
+                </div>
+                <div class="rounded-2xl border-2 border-slate-100 bg-white p-3 h-28 flex flex-col justify-between">
+                    <div><div class="skel h-4 w-4/5 mb-2"></div><div class="skel h-3 w-2/5"></div></div>
+                    <div class="flex justify-end"><div class="skel h-8 w-16"></div></div>
+                </div>
+                <div class="rounded-2xl border-2 border-slate-100 bg-white p-3 h-28 flex flex-col justify-between">
+                    <div><div class="skel h-4 w-1/2 mb-2"></div><div class="skel h-3 w-1/3"></div></div>
+                    <div class="flex justify-end"><div class="skel h-8 w-16"></div></div>
+                </div>
+                <div class="rounded-2xl border-2 border-slate-100 bg-white p-3 h-28 flex flex-col justify-between">
+                    <div><div class="skel h-4 w-3/4 mb-2"></div><div class="skel h-3 w-2/5"></div></div>
+                    <div class="flex justify-end"><div class="skel h-8 w-16"></div></div>
+                </div>
+                <div class="rounded-2xl border-2 border-slate-100 bg-white p-3 h-28 flex flex-col justify-between">
+                    <div><div class="skel h-4 w-3/5 mb-2"></div><div class="skel h-3 w-1/4"></div></div>
+                    <div class="flex justify-end"><div class="skel h-8 w-16"></div></div>
+                </div>
+            </div>
         </div>
 
         <div id="slider-backdrop"></div>
@@ -463,6 +534,10 @@
                         <button id="btn-feedback" class="w-full h-14 bg-slate-800 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform" onclick="openFeedbackForm()">
                             <i class="fas fa-comment-dots"></i>フィードバックを送る
                         </button>
+                        <button id="btn-slack" class="w-full h-14 bg-[#4A154B] text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform" onclick="window.open('https://mipox.enterprise.slack.com/archives/C0AK1161SRJ', '_blank')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 122.8 122.8" fill="currentColor"><path d="M25.8 77.6c0 7.1-5.8 12.9-12.9 12.9S0 84.7 0 77.6s5.8-12.9 12.9-12.9h12.9v12.9zm6.5 0c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9v32.3c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V77.6z" fill="#E01E5A"/><path d="M45.2 25.8c-7.1 0-12.9-5.8-12.9-12.9S38.1 0 45.2 0s12.9 5.8 12.9 12.9v12.9H45.2zm0 6.5c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H12.9C5.8 58.1 0 52.3 0 45.2s5.8-12.9 12.9-12.9h32.3z" fill="#36C5F0"/><path d="M97 45.2c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9-5.8 12.9-12.9 12.9H97V45.2zm-6.5 0c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V12.9C64.7 5.8 70.5 0 77.6 0s12.9 5.8 12.9 12.9v32.3z" fill="#2EB67D"/><path d="M77.6 97c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9-12.9-5.8-12.9-12.9V97h12.9zm0-6.5c-7.1 0-12.9-5.8-12.9-12.9s5.8-12.9 12.9-12.9h32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H77.6z" fill="#ECB22E"/></svg>
+                            最新情報はコチラ
+                        </button>
                         <button id="btn-back-description" class="w-full h-14 bg-slate-100 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2">
                             <i class="fas fa-arrow-left"></i>戻る
                         </button>
@@ -486,7 +561,7 @@
         <span id="toast-text"></span>
     </div>
 
-    <div id="server-bridge" style="display:none;" data-payload='null' data-email="<?= userEmail ?>"></div>
+    <div id="server-bridge" style="display:none;" data-payload="<?= initialPayload ?>" data-email="<?= userEmail ?>"></div>
 
     <script>
         if (typeof google === 'undefined') { 
@@ -529,7 +604,7 @@
                 state.selectedDate = formatJST(new Date());
                 updateDateDisplay();
 
-                if (!rawPayload || rawPayload === "null" || rawPayload === "undefined" || rawPayload === "") {
+                if (!rawPayload || rawPayload === "null" || rawPayload === "undefined" || rawPayload === "" || rawPayload.indexOf('<' + '?') === 0) {
                   if (typeof google === 'undefined' || !google.script) {
                     processInitialData(getDemoData(), userEmail);
                   } else {
