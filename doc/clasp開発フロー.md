@@ -8,6 +8,7 @@ VSCode で編集したコードを Google Apps Script にアップロードし�
 
 - Node.js がインストールされていること
 - GAS プロジェクトが既に存在していること（スクリプト ID: `1qRlJJFAtj__4ju5x2nkDRwB0ypz9Omx1xBCu8lmOXPBZzvwajg0kYIgd`）
+  - プロジェクト URL: https://script.google.com/u/0/home/projects/1qRlJJFAtj__4ju5x2nkDRwB0ypz9Omx1xBCu8lmOXPBZzvwajg0kYIgd/edit
 
 ---
 

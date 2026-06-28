@@ -861,10 +861,22 @@
             var rId = document.getElementById('reg-room-select').value, b = state.selectedRegBase, btn = document.getElementById('btn-reg-change');
             if (!rId || !b) return;
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch animate-spin mr-2"></i><span>保存中...</span>'; }
-            google.script.run.withSuccessHandler(function(res) { 
-                if (res && res.success) { state.userSetting = { base: b, roomId: rId }; state.userExists = true; state.isRegLocked = true; initRoomNavigation(); syncHeaderStatus(); showMainView(true); showToast("設定を保存しました", "success"); 
+            google.script.run.withSuccessHandler(function(res) {
+                if (res && res.success) {
+                    state.userSetting = { base: b, roomId: rId }; state.userExists = true; state.isRegLocked = true;
+                    state.registeredData = {}; state.loadedMonths = [];
+                    initRoomNavigation(); syncHeaderStatus();
+                    var now = new Date(), pending = 3;
+                    for (var i = 0; i < 3; i++) { (function(offset) {
+                        var d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+                        var key = d.getFullYear() + "-" + (d.getMonth() + 1);
+                        google.script.run.withSuccessHandler(function(pastData) {
+                            Object.assign(state.registeredData, pastData); state.loadedMonths.push(key);
+                            if (--pending === 0) { showMainView(true); showToast("設定を保存しました", "success"); }
+                        }).getPastWasteData(d.getFullYear(), d.getMonth() + 1);
+                    })(i); }
                 } else { showToast("保存失敗", "warning"); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock mr-2"></i>この設定で保存する'; } }
-            }).registerUserSetting(b, rId); 
+            }).registerUserSetting(b, rId);
         }
 
         function openSlider(id, name) { 
